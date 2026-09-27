@@ -1,0 +1,1295 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>麦弗逊式独立前悬挂系统 · 3D 教学模型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden;
+    font-family:"Segoe UI","Microsoft YaHei",sans-serif; background:#15181c; }
+  #app { position:fixed; inset:0; }
+  #app canvas { display:block; }
+
+  /* ---------- 紧凑控制面板 ---------- */
+  #panel { position:fixed; top:12px; left:12px; width:224px; padding:10px 12px 8px;
+    border-radius:10px; z-index:10; user-select:none; font-size:12px;
+    background:rgba(22,26,31,.85); color:#e6eaee; border:1px solid rgba(255,255,255,.09);
+    backdrop-filter:blur(10px); box-shadow:0 4px 18px rgba(0,0,0,.35);
+    max-height:calc(100vh - 24px); overflow-y:auto; }
+  body.light #panel { background:rgba(255,255,255,.9); color:#22282f;
+    border-color:rgba(0,0,0,.08); box-shadow:0 4px 18px rgba(0,0,0,.12); }
+  .title { font-size:13px; font-weight:600; line-height:1.45; margin-bottom:8px; }
+  .title span { opacity:.6; font-weight:400; font-size:11px; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px; }
+  button { appearance:none; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);
+    color:inherit; font-size:11.5px; padding:5px 4px; border-radius:6px; cursor:pointer;
+    transition:background .15s; font-family:inherit; }
+  button:hover { background:rgba(255,255,255,.14); }
+  button.on { background:#2f6fd0; border-color:#2f6fd0; color:#fff; }
+  body.light button { border-color:rgba(0,0,0,.15); background:rgba(0,0,0,.04); }
+  body.light button:hover { background:rgba(0,0,0,.09); }
+  body.light button.on { background:#2f6fd0; border-color:#2f6fd0; color:#fff; }
+  .slider { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
+  .slider input[type=range] { flex:1; accent-color:#2f6fd0; height:14px; cursor:pointer; }
+  .slider #expVal { width:34px; text-align:right; opacity:.75; font-variant-numeric:tabular-nums; }
+  .stats { display:grid; gap:2px; margin-bottom:8px; font-size:11px;
+    border-top:1px solid rgba(255,255,255,.1); padding-top:6px; }
+  body.light .stats { border-top-color:rgba(0,0,0,.1); }
+  .stats div { display:flex; justify-content:space-between; gap:10px; }
+  .stats span { opacity:.6; }
+  .stats b { font-weight:600; color:#7fb3f5; font-variant-numeric:tabular-nums; }
+  body.light .stats b { color:#2f6fd0; }
+  .legend { display:grid; gap:2px; border-top:1px solid rgba(255,255,255,.1); padding-top:7px; }
+  body.light .legend { border-top-color:rgba(0,0,0,.1); }
+  .lg { display:flex; align-items:center; gap:7px; padding:3px 6px; border-radius:5px; cursor:pointer; }
+  .lg:hover { background:rgba(255,255,255,.09); }
+  body.light .lg:hover { background:rgba(0,0,0,.06); }
+  .lg i { width:10px; height:10px; border-radius:2px; flex:none; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .lg.on { background:rgba(47,111,208,.24); box-shadow:inset 0 0 0 1px rgba(47,111,208,.6); }
+  body.light .lg.on { background:rgba(47,111,208,.18); }
+  .lg .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lg .eye { flex:none; margin-left:auto; padding:1px 6px; font-size:11px; line-height:1.3; border:1px solid rgba(255,255,255,.18); border-radius:4px; background:rgba(255,255,255,.06); color:inherit; opacity:.85; cursor:pointer; }
+  .lg .eye:hover { opacity:1; background:rgba(255,255,255,.14); }
+  body.light .lg .eye { border-color:rgba(0,0,0,.2); background:rgba(0,0,0,.05); }
+  .lg .eye.off { opacity:.45; border-style:dashed; }
+  .traces { border-top:1px solid rgba(255,255,255,.1); padding-top:7px; margin-top:4px; display:grid; gap:2px; }
+  body.light .traces { border-top-color:rgba(0,0,0,.1); }
+  .traces .ttl { font-size:11px; opacity:.6; margin-bottom:1px; }
+  .trow { display:flex; align-items:center; gap:6px; font-size:11.5px; cursor:pointer; padding:2px 5px; border-radius:5px; }
+  .trow:hover { background:rgba(255,255,255,.08); }
+  body.light .trow:hover { background:rgba(0,0,0,.05); }
+  .trow input { accent-color:#2f6fd0; cursor:pointer; margin:0; }
+  .trow i { width:15px; height:3px; border-radius:2px; flex:none; }
+  #chartWrap { position:fixed; right:12px; bottom:12px; z-index:10; padding:6px 8px 5px; border-radius:10px;
+    background:rgba(22,26,31,.85); border:1px solid rgba(255,255,255,.09); backdrop-filter:blur(10px); box-shadow:0 4px 18px rgba(0,0,0,.35); }
+  body.light #chartWrap { background:rgba(255,255,255,.9); border-color:rgba(0,0,0,.08); }
+  #chartWrap .cap { font-size:10.5px; opacity:.6; margin-bottom:3px; }
+  #chartWrap .fn { font-size:10px; opacity:.5; margin-top:4px; line-height:1.45; }
+  #chart { display:block; }
+
+  #hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); z-index:10;
+    font-size:11.5px; opacity:.55; color:#cfd6dd; pointer-events:none; white-space:nowrap; }
+  body.light #hint { color:#444b53; }
+
+  /* ---------- 3D 部件标签 ---------- */
+  .lab { display:flex; align-items:center; gap:6px; white-space:nowrap; pointer-events:none;
+    transform:translate(14px,-50%); padding:3px 10px 3px 7px; border-radius:999px; font-size:12px;
+    background:rgba(18,22,27,.88); color:#eef2f6; border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  body.light .lab { background:rgba(255,255,255,.92); color:#1d232a;
+    border-color:rgba(0,0,0,.12); box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  .lab i { width:9px; height:9px; border-radius:50%; flex:none; }
+  .lab::before { content:""; position:absolute; left:-13px; top:50%; width:13px; height:1px;
+    background:rgba(255,255,255,.35); }
+  body.light .lab::before { background:rgba(0,0,0,.3); }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="panel">
+  <div class="title">麦弗逊式独立前悬挂系统<br><span>MacPherson Strut Front Suspension · 教学 3D 模型</span></div>
+  <div class="btns">
+    <button id="btnPlay" class="on">⏸ 暂停演示</button>
+    <button id="btnLabel" class="on">部件标签</button>
+    <button id="btnRot">自动旋转</button>
+    <button id="btnTheme">浅色主题</button>
+    <button id="btnReset">重置视角</button>
+  </div>
+  <div class="slider">
+    <span>左轮行程</span>
+    <input id="slL" type="range" min="-5" max="12" step="0.1" value="0">
+  </div>
+  <div class="slider">
+    <span>右轮行程</span>
+    <input id="slR" type="range" min="-5" max="12" step="0.1" value="0">
+  </div>
+  <div class="slider">
+    <span>转向角</span>
+    <input id="slSteer" type="range" min="-30" max="30" step="1" value="0">
+  </div>
+  <div class="stats">
+    <div><span>悬挂行程</span><b id="statStroke">L 0 / R 0 mm</b></div>
+    <div><span>车身侧倾</span><b id="statRoll">0.0°</b></div>
+    <div><span>稳定杆扭转</span><b id="statTwist">0.0°</b></div>
+    <div><span>转向角</span><b id="statSteer">0.0°</b></div>
+  </div>
+  <div class="slider">
+    <span>爆炸视图</span>
+    <input id="explode" type="range" min="0" max="100" value="0">
+    <span id="expVal">0%</span>
+  </div>
+  <div class="traces">
+    <div class="ttl">竖向位移曲线</div>
+    <label class="trow"><input type="checkbox" id="cbR" checked><i style="background:#ff9f43"></i>地面输入 r(t)</label>
+    <label class="trow"><input type="checkbox" id="cbY1" checked><i style="background:#2ec4e8"></i>左支柱顶 y₁(t)</label>
+    <label class="trow"><input type="checkbox" id="cbY2" checked><i style="background:#51cf66"></i>右支柱顶 y₂(t)</label>
+  </div>
+  <div class="legend" id="legend"></div>
+</div>
+<div id="hint">拖拽旋转 · 滚轮缩放 · 右键平移 · 点击部件高亮</div>
+<div id="chartWrap">
+  <div class="cap">r(t) 地面输入 · y₁(t)/y₂(t) 支柱顶输出（竖向位移）</div>
+  <div class="fn">关系：y(t) = 悬挂（弹簧-阻尼）对地面输入 r(t) 的滤波响应<br>幅值被衰减、相位滞后 —— 即悬挂降低地面起伏对车身顶面的影响</div>
+  <canvas id="chart" width="380" height="150"></canvas>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+/* ================= 基础场景 ================= */
+const app = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15181c);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 1, 2000);
+const CAM_HOME = new THREE.Vector3(-182, 138, 214);
+const TGT_HOME = new THREE.Vector3(0, 80, 0);
+camera.position.copy(CAM_HOME);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+app.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+app.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(TGT_HOME);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 60;
+controls.maxDistance = 600;
+controls.autoRotateSpeed = 1.4;
+controls.maxPolarAngle = Math.PI * 0.92;
+
+/* 灯光：技术可视化 —— 均匀、柔和、金属质感 */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x40464d, 1.0));
+const key = new THREE.DirectionalLight(0xffffff, 2.4);
+key.position.set(-140, 220, 130);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -220; key.shadow.camera.right = 220;
+key.shadow.camera.top = 300;  key.shadow.camera.bottom = -60;
+key.shadow.camera.far = 800;  key.shadow.bias = -0.0004;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xd6e0ee, 0.8);
+fill.position.set(150, 90, -120);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+rim.position.set(0, 80, -200);
+scene.add(rim);
+
+/* 地面（外部系统：纯色路面 + 柔和投影 + 参考网格） */
+const groundMat = new THREE.MeshStandardMaterial({
+  color:0x2b2f35, roughness:0.95, metalness:0.0
+});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const grid = new THREE.GridHelper(420, 42, 0x6b727b, 0x4a5058);
+grid.position.y = 0.4;
+grid.material.transparent = true;
+grid.material.opacity = 0.22;
+scene.add(grid);
+
+/* ================= 材质（灰色金属系） ================= */
+function std(color, roughness=0.45, metalness=0.9) {
+  return new THREE.MeshStandardMaterial({
+    color, roughness, metalness,
+    polygonOffset:true, polygonOffsetFactor:1, polygonOffsetUnits:1
+  });
+}
+const MAT = {
+  spring:  std(0xa8aeb6, 0.32, 0.95),  // 螺旋弹簧 — 亮钢
+  strut:   std(0xd3d7dc, 0.28, 0.95),  // 减震器筒 — 抛光筒身
+  rod:     std(0xe4e8ec, 0.22, 1.0),   // 活塞杆
+  knuckle: std(0x7f858c, 0.58, 0.85),  // 转向节 — 铸铁
+  arm:     std(0x999fa6, 0.50, 0.85),  // 下控制臂 — 冲压钢
+  bar:     std(0xb9bfc6, 0.34, 0.95),  // 横向稳定杆 — 弹簧钢
+  link:    std(0x8b9198, 0.42, 0.90),  // 连接杆
+  disc:    std(0xc6cbd1, 0.25, 0.95),  // 制动盘/轮毂
+  rubber:  std(0x33373c, 0.85, 0.15),  // 橡胶衬套
+  dark:    std(0x565c63, 0.55, 0.80),  // 安装座/螺栓
+  frame:   std(0x4d535a, 0.62, 0.70),  // 副车架（安装基准，非标注部件）
+  /* ---- 外部系统 ---- */
+  tire:    std(0x26292d, 0.92, 0.05),  // 轮胎橡胶
+  rim:     std(0xd2d6db, 0.22, 0.95),  // 轮毂铝合金
+  body:    std(0x73797f, 0.55, 0.75),  // 车身钣金（减震塔/车架）
+  boot:    std(0x2c2f34, 0.90, 0.10),  // 球笼防尘套橡胶
+};
+
+/* 清晰部件轮廓线 */
+const lineMat = new THREE.LineBasicMaterial({ color:0x1b1f24, transparent:true, opacity:0.95 });
+
+/* ================= 工具函数 ================= */
+const V = (x,y,z) => new THREE.Vector3(x,y,z);
+const _V120 = V(0,120,0);
+const parts = [];                       // 可教学标注的独立部件
+const pickables = [];
+
+function makePart(name, accent, explode) {
+  const g = new THREE.Group();
+  g.userData = { name, accent, explode: explode.clone(),
+                 base: new THREE.Vector3(), meshes:[], flash:0 };
+  scene.add(g); parts.push(g);
+  return g;
+}
+function addMesh(group, mesh, edges=true, edgeThreshold=32) {
+  mesh.material = mesh.material.clone();          // 独立材质实例，便于高亮
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  group.add(mesh);
+  // 沿父级链找到所属教学部件（部件内部可有运动子组）
+  let root = group;
+  while (root && !root.userData.name) root = root.parent;
+  if (root && root.userData.name) {
+    root.userData.meshes.push(mesh);
+    pickables.push(mesh);
+  }
+  if (edges) {
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, edgeThreshold), lineMat);
+    mesh.add(e);
+  }
+  return mesh;
+}
+/* 两点之间的圆柱体（可锥度），创建后由 rod() 挂接 */
+function cyl(a, b, rA, rB, mat, seg=24) {
+  const len = a.distanceTo(b);
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rB, rA, len, seg, 1), mat);
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(V(0,1,0), b.clone().sub(a).normalize());
+  mesh.castShadow = true;
+  mesh.userData.restLen = len;          // 动态更新端点时用于长度缩放
+  return mesh;
+}
+/* 运行时更新杆两端（中点 + 朝向 + 长度缩放） */
+const _up = V(0,1,0), _dir = new THREE.Vector3();
+function setRod(mesh, a, b) {
+  _dir.copy(b).sub(a);
+  const len = _dir.length();
+  mesh.position.copy(a).addScaledVector(_dir, 0.5);
+  mesh.quaternion.setFromUnitVectors(_up, _dir.normalize());
+  if (mesh.userData.restLen) mesh.scale.y = len / mesh.userData.restLen;
+}
+function setBall(mesh, p) { mesh.position.copy(p); }
+/* 直接挂接到 group 的两点圆柱 */
+function rod(group, a, b, rA, rB, mat, seg=24, edges=true) {
+  const m = cyl(a, b, rA, rB, mat, seg);
+  addMesh(group, m, edges);
+  return m;
+}
+function ball(group, p, r, mat, seg=20, edges=false) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, seg, Math.max(12, seg>>1)), mat);
+  m.position.copy(p);
+  addMesh(group, m, edges);
+  return m;
+}
+function box(group, p, size, mat, edges=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), mat);
+  m.position.copy(p);
+  addMesh(group, m, edges);
+  return m;
+}
+/* 垂直于轴线 u 的圆环 */
+function torus(group, center, u, radius, tube, mat) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 12, 36), mat);
+  m.position.copy(center);
+  m.quaternion.setFromUnitVectors(V(0,0,1), u.clone().normalize());
+  addMesh(group, m, false);
+  return m;
+}
+
+/* 螺旋弹簧曲线（沿任意轴线的圆柱螺旋线） */
+class HelixCurve extends THREE.Curve {
+  constructor(a, b, radius, turns, phase=0) {
+    super();
+    this.a = a.clone(); this.radius = radius; this.turns = turns; this.phase = phase;
+    const axis = b.clone().sub(a);
+    this.len = axis.length();
+    this.u = axis.clone().normalize();
+    const tmp = Math.abs(this.u.y) > 0.9 ? V(1,0,0) : V(0,1,0);
+    this.v = new THREE.Vector3().crossVectors(this.u, tmp).normalize();
+    this.w = new THREE.Vector3().crossVectors(this.u, this.v).normalize();
+  }
+  getPoint(t, target = new THREE.Vector3()) {
+    const ang = this.phase + t * this.turns * Math.PI * 2;
+    return target.copy(this.a)
+      .addScaledVector(this.u, t * this.len)
+      .addScaledVector(this.v, Math.cos(ang) * this.radius)
+      .addScaledVector(this.w, Math.sin(ang) * this.radius);
+  }
+}
+
+/* ================= 部件构建 =================
+   坐标约定：X = 横向（左为负），Y = 竖直向上，Z = 纵向（前为正）
+   s = -1 左侧，s = +1 右侧 */
+
+function strutAxis(s) {
+  const L = V(s*70, 50, 0);                 // 下端（转向管柱夹）
+  const T = V(s*58, 152, -6);               // 塔顶安装点（向内、略向后倾）
+  const u = T.clone().sub(L).normalize();
+  const len = L.distanceTo(T);
+  return { L, T, u, len, at: t => L.clone().addScaledVector(u, t*len) };
+}
+
+/* ---- 1/6 减震器筒（含活塞杆、顶胶、弹簧座、连杆支架） ----
+   内部按运动归属拆为：gW=轮侧（随车轮跳动） gB=车身侧（随车身） */
+function buildStrut(s) {
+  const g = makePart('减震器筒', '#dfe3e8', strutAxis(s).u.multiplyScalar(20));
+  const gW = new THREE.Group();  g.add(gW);   // 轮侧：缸筒、下托盘、连杆凸台
+  const gB = new THREE.Group();  g.add(gB);   // 车身侧：活塞杆、顶胶、上弹簧座
+  const { L, u, at } = strutAxis(s);
+
+  rod(gW, L, at(0.70), 4.4, 4.2, MAT.strut, 28);           // 工作缸筒
+  rod(gB, at(0.66), at(0.965), 1.8, 1.8, MAT.rod, 20);     // 活塞杆
+  rod(gB, at(0.685), at(0.90), 3.2, 3.2, MAT.rubber, 20);  // 防尘套
+  rod(gB, at(0.955), at(1.015), 7.4, 6.0, MAT.dark, 28);   // 顶胶/上座
+  rod(gB, at(0.925), at(0.958), 5.8, 5.8, MAT.strut, 26);  // 平面轴承座
+  rod(gW, at(0.283), at(0.308), 12.4, 9.2, MAT.dark, 28);  // 下弹簧托盘
+  torus(gW, at(0.305), u, 12.2, 1.0, MAT.dark);
+  rod(gB, at(0.852), at(0.875), 9.0, 11.8, MAT.dark, 28);  // 上弹簧座
+  torus(gB, at(0.855), u, 11.6, 1.0, MAT.dark);
+
+  // 稳定杆连接杆安装凸台
+  const lug = at(0.24).add(V(s*3, 0, 11));
+  rod(gW, at(0.24), lug, 1.7, 1.7, MAT.dark, 14);
+  ball(gW, lug, 2.0, MAT.dark, 16);
+  // 支柱顶面中心点标记（用于 y1(t)/y2(t) 输出）
+  const topMark = new THREE.Object3D();
+  topMark.position.copy(at(1.015));
+  gB.add(topMark);
+  return { group:g, gW, gB, lug, topMark };
+}
+
+/* ---- 2/6 螺旋弹簧（spRig 沿减震筒轴线，可随行程压缩） ---- */
+function buildSpring(s) {
+  const { u, len, at } = strutAxis(s);
+  const g = makePart('螺旋弹簧', '#6ea8fe', u.clone().multiplyScalar(58));
+  const a = at(0.315), b = at(0.845);
+  const L = a.distanceTo(b);                       // 弹簧自由长度（沿轴）
+
+  // spRig：原点=下弹簧座，局部 +Y 指向减震筒上方
+  const spRig = new THREE.Group();
+  spRig.position.copy(a);
+  spRig.quaternion.setFromUnitVectors(V(0,1,0), u.clone().normalize());
+  g.add(spRig);
+
+  const curve = new HelixCurve(V(0,0,0), V(0,L,0), 10.6, 6.0, s > 0 ? Math.PI : 0);
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 420, 1.7, 14, false), MAT.spring);
+  tube.castShadow = true;
+  addMesh(spRig, tube, false);
+  ball(spRig, V(0,0,0), 1.7, MAT.spring, 16);      // 下端圈
+  ball(spRig, V(0,L,0), 1.7, MAT.spring, 16);      // 上端圈
+  // 点击拾取代理（不可见，扩大细部件的点击区域）
+  const proxy = cyl(V(0,0,0), V(0,L,0), 12.6, 12.6, MAT.spring, 12);
+  proxy.visible = false;
+  addMesh(spRig, proxy, false);
+  return { group:g, spRig, a, L, uy:u.y };
+}
+
+/* ---- 3/6 转向节（羊角，含轮毂、制动盘、转向摇臂） ---- */
+function buildKnuckle(s) {
+  const g = makePart('转向节（羊角）', '#9aa1a9', V(s*44, -16, 0));
+  const W = V(s*82, 42, 0);                          // 轮心
+  const { u, at } = strutAxis(s);
+
+  // 轮毂法兰 + 转向节轴颈
+  rod(g, W.clone().add(V(s*3,0,0)), W.clone().add(V(s*-3,0,0)), 9.0, 9.0, MAT.disc, 28);
+  rod(g, W, W.clone().add(V(s*15,0,0)), 3.2, 3.7, MAT.knuckle, 22);
+  // 5 颗轮毂螺栓
+  for (let k=0; k<5; k++) {
+    const a0 = k/5*Math.PI*2 + 0.3;
+    const p = W.clone().add(V(s*3, Math.cos(a0)*6.4, Math.sin(a0)*6.4));
+    rod(g, p, p.clone().add(V(s*4.5,0,0)), 0.5, 0.5, MAT.dark, 10);
+  }
+  // 制动盘
+  rod(g, W.clone().add(V(s*4.2,0,0)), W.clone().add(V(s*6.2,0,0)), 15.5, 15.5, MAT.disc, 40, false);
+
+  // 铸铁本体
+  const body = new THREE.Mesh(new THREE.SphereGeometry(7, 24, 18), MAT.knuckle);
+  body.position.set(s*75, 42, 0);
+  body.scale.set(1.15, 1.28, 0.95);
+  addMesh(g, body, false);
+
+  // 上部：与减震筒连接的叉形夹（抱箍 + 夹紧螺栓）
+  rod(g, V(s*75, 47.5, 0), V(s*70.5, 51.5, 0), 4.4, 5.4, MAT.knuckle, 22);
+  const collarC = at(0.015);
+  rod(g, at(-0.035), at(0.065), 5.8, 5.8, MAT.knuckle, 28);
+  rod(g, collarC.clone().add(V(0,0,-7.5)), collarC.clone().add(V(0,0,7.5)), 0.9, 0.9, MAT.dark, 10);
+  ball(g, collarC.clone().add(V(0,0,7.2)), 1.7, MAT.dark, 14);
+  ball(g, collarC.clone().add(V(0,0,-7.2)), 1.7, MAT.dark, 14);
+
+  // 下部：球头锥孔
+  const BJ = V(s*70, 27, 3);                        // 下球头中心
+  rod(g, V(s*74.5, 37, 1), BJ.clone().add(V(0,1.2,0)), 3.9, 2.5, MAT.knuckle, 20);
+
+  // 前部：转向摇臂（末端为球头座，横拉杆球头连接螺栓穿入此处）
+  rod(g, V(s*72, 40, 5), V(s*57, 37, 28), 3.1, 2.6, MAT.knuckle, 20);
+  ball(g, V(s*57, 36.5, 28), 2.6, MAT.knuckle, 16);
+
+  return { group:g, BJ, W };
+}
+
+/* ---- 4/6 下控制臂（A/L 型摆臂，含衬套与球头） ---- */
+function buildArm(s, BJ) {
+  const g = makePart('下控制臂', '#aab0b7', V(s*18, -40, 0));
+  const F = V(s*23, 17, 26);                        // 前衬套
+  const R = V(s*23, 14, -24);                       // 后衬套
+
+  rod(g, F, BJ, 2.3, 3.4, MAT.arm, 20);
+  rod(g, R, BJ, 2.3, 3.4, MAT.arm, 20);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(4, 20, 14), MAT.arm);
+  body.position.copy(BJ).add(V(s*-2, 0.4, 0));
+  body.scale.set(1.35, 0.9, 1.1);
+  addMesh(g, body, false);
+  ball(g, BJ, 2.8, MAT.arm, 18);                    // 球头销球头
+
+  // 两个车身侧橡胶衬套（钢套内芯）
+  for (const P of [F, R]) {
+    rod(g, P.clone().add(V(0,0,-5.8)), P.clone().add(V(0,0,5.8)), 3.9, 3.9, MAT.rubber, 22);
+    rod(g, P.clone().add(V(0,0,-6.2)), P.clone().add(V(0,0,6.2)), 2.1, 2.1, MAT.dark, 18);
+  }
+  // 稳定杆连接杆安装点（下控制臂外侧、低位）——球头 + 标记
+  const sLug = V(s*54, 24, 10);
+  ball(g, sLug, 2.4, MAT.arm, 16);
+  const swayMark = new THREE.Object3D();
+  swayMark.position.copy(sLug);
+  g.add(swayMark);
+  g.userData.swayMark = swayMark;
+  g.userData.sLug = sLug;
+  return g;
+}
+
+/* ---- 5/6 横向稳定杆（中央杆身固定于副车架，两端臂可绕衬套扭转） ---- */
+function buildSwayBar() {
+  const g = makePart('横向稳定杆', '#c8cdd3', V(0, -44, 0));
+  // 中央杆身（车身侧，静止）
+  rod(g, V(-40,20,0), V(40,20,0), 1.9, 1.9, MAT.bar, 16, false);
+
+  const arms = {};
+  for (const s of [-1, 1]) {
+    // 端臂 rig：原点=衬套中心，绕车轴 X 扭转
+    const rig = new THREE.Group();
+    rig.position.set(s*34, 20, 0);
+    g.add(rig);
+    // 端臂管曲线（衬套 → 端尖）
+    // 端臂管曲线：自中央杆端向外、略向前下方，端尖贴近下控制臂外侧
+    const armPts = [ V(s*4,0,0), V(s*8,-0.5,3), V(s*11,-1,5), V(s*14,-1,8) ];
+    const curve = new THREE.CatmullRomCurve3(armPts, false, 'centripetal');
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 90, 1.9, 14, false), MAT.bar);
+    tube.castShadow = true;
+    addMesh(rig, tube, false);
+    const proxy = new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 3.8, 8, false), MAT.bar);
+    proxy.visible = false;
+    addMesh(rig, proxy, false);
+    ball(rig, V(s*14,-1,8), 1.9, MAT.bar, 14);
+    // 端尖标记（连接杆读取此处世界坐标）
+    const tipMark = new THREE.Object3D();
+    tipMark.position.set(s*14, -1, 8);
+    rig.add(tipMark);
+    arms[s] = { rig, tipMark };
+  }
+
+  // 两个车身安装点：橡胶衬环 + 安装夹板
+  for (const sx of [-1, 1]) {
+    const c = V(sx*34, 20, 0);
+    const bushing = new THREE.Mesh(new THREE.TorusGeometry(2.6, 1.5, 12, 32), MAT.rubber);
+    bushing.position.copy(c);
+    bushing.quaternion.setFromUnitVectors(V(0,0,1), V(1,0,0));
+    addMesh(g, bushing, false);
+    box(g, V(sx*34, 14.5, 0), V(5.5, 10.5, 7), MAT.frame);
+  }
+  return { group:g, arms, tipL:V(-48,19,8), tipR:V(48,19,8) };
+}
+
+/* ---- 6/6 稳定杆连接杆（竖拉杆，带球头；两端随动） ---- */
+function buildLink(s, barTip, strutLug) {
+  const g = makePart('连接杆', '#878e96', V(0, -14, 34));
+  const main = rod(g, barTip, strutLug, 1.4, 1.4, MAT.link, 16);
+  const ballBot = ball(g, barTip, 2.8, MAT.link, 18);
+  const ballTop = ball(g, strutLug, 2.8, MAT.link, 18);
+  const endBot = rod(g, barTip, barTip.clone().lerp(strutLug, 0.12), 0.9, 0.9, MAT.dark, 10);
+  const endTop = rod(g, strutLug, strutLug.clone().lerp(barTip, 0.12), 0.9, 0.9, MAT.dark, 10);
+  const proxyLink = cyl(barTip, strutLug, 3.6, 3.6, MAT.link, 10);
+  proxyLink.visible = false;
+  addMesh(g, proxyLink, false);
+  return { group:g, meshes:{ main, ballBot, ballTop, endBot, endTop, proxy:proxyLink },
+           tipRest:barTip.clone(), lugRest:strutLug.clone() };
+}
+
+/* ================ 外部系统（静态） ================ */
+
+/* ---- 车轮（spinRig 绕车轴滚动；整体随跳动/转向 rig 运动） ---- */
+function buildWheel(s) {
+  const g = makePart('车轮', '#e0a33e', V(s*95, 0, 0));
+  const W = V(s*82, 42, 0);                          // 轮心（与转向节同轴）
+  const spinRig = new THREE.Group();                 // 滚动子组
+  spinRig.position.copy(W);
+  g.add(spinRig);
+
+  // 轮胎（外径 42，胎面接地 y=0）
+  const tire = new THREE.Mesh(new THREE.TorusGeometry(33, 9, 20, 56), MAT.tire);
+  tire.rotation.y = Math.PI/2;                      // 环面轴线沿车轴 X
+  addMesh(spinRig, tire, false);
+
+  // 轮毂外唇
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(20, 3, 12, 44), MAT.rim);
+  lip.position.set(s*7, 0, 0);
+  lip.rotation.y = Math.PI/2;
+  addMesh(spinRig, lip, false);
+
+  // 轮辋桶身（开口薄壁，可透视内部制动盘）
+  const barrel = new THREE.Mesh(
+    new THREE.CylinderGeometry(22.5, 22.5, 13, 28, 1, true), MAT.rim);
+  barrel.rotation.z = Math.PI/2;                    // 筒轴沿 X
+  addMesh(spinRig, barrel, true);
+
+  // 5 根辐条
+  for (let k = 0; k < 5; k++) {
+    const a = k/5*Math.PI*2 + 0.3;
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(2, 15, 4), MAT.rim);
+    sp.position.set(s*7, Math.cos(a)*13, Math.sin(a)*13);
+    sp.rotation.x = a;
+    addMesh(spinRig, sp, true, 40);
+  }
+  rod(spinRig, V(s*6,0,0), V(s*10,0,0), 7.5, 7.5, MAT.rim, 24);  // 中心盖
+  return { group:g, spinRig };
+}
+
+/* ---- 半轴（传动轴；内端接差速器，外端随车轮） ---- */
+function buildHalfShaft(s) {
+  const g = makePart('半轴（传动轴）', '#74b68a', V(s*60, -12, 0));
+  const inner = V(s*26, 40, 1);                     // 内侧差速器端（车身侧）
+  const outer = V(s*78, 42, 0);                     // 外侧轮毂端（轮侧）
+  // 轴杆（加粗，两端收进球笼内）
+  const shaft = rod(g, inner.clone().lerp(outer, 0.14),
+                        outer.clone().lerp(inner, 0.14), 3.2, 3.2, MAT.bar, 18);
+  // 球笼万向节 + 锥形防尘套（大端箍在节上、小端箍在轴上）
+  const ballIn  = ball(g, inner, 4.2, MAT.boot, 18);
+  const ballOut = ball(g, outer, 4.0, MAT.boot, 18);
+  const bootIn  = rod(g, inner, inner.clone().lerp(outer, 0.16), 4.8, 1.9, MAT.boot, 16);
+  const bootOut = rod(g, outer, outer.clone().lerp(inner, 0.16), 4.6, 1.9, MAT.boot, 16);
+  return { group:g, meshes:{ shaft, ballIn, ballOut, bootIn, bootOut },
+           innerRest:inner.clone(), outerRest:outer.clone() };
+}
+
+/* ---- 差速器（半轴内端的安装基础，属传动系统上下文） ---- */
+function buildDifferential() {
+  const g = new THREE.Group();
+  scene.add(g);
+  // 差速器壳（横置圆柱，两端各接一根半轴）
+  const housing = new THREE.Mesh(new THREE.CylinderGeometry(7.5, 7.5, 44, 28), MAT.frame);
+  housing.rotation.z = Math.PI/2;                   // 壳体轴线沿 X
+  housing.position.set(0, 40, 1);
+  addMesh(g, housing, true);
+  for (const sx of [-1, 1]) {                       // 两端端盖
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(7.5, 24, 16), MAT.frame);
+    cap.position.set(sx*22, 40, 1);
+    cap.scale.x = 0.5;
+    addMesh(g, cap, false);
+  }
+  // 与副车架纵梁相连的安装支脚（走位避开稳定杆中央杆身）
+  rod(g, V(-16,35,6), V(-24,11,8), 1.8, 1.8, MAT.frame, 12);
+  rod(g, V( 16,35,6), V( 24,11,8), 1.8, 1.8, MAT.frame, 12);
+  return g;
+}
+
+/* ---- 转向机与横拉杆（齿条经抱箍安装在副车架上，可轴向滑动） ---- */
+function buildSteering() {
+  const g = makePart('转向机与横拉杆', '#b58ad6', V(0, -20, 38));
+  const rackRod = rod(g, V(-44,30,33), V(44,30,33), 2.8, 2.8, MAT.dark, 20);
+  const rackBox = box(g, V(0,30,33), V(12, 6, 6), MAT.frame);
+  // 安装支架：副车架前横梁 → 两根立柱 → 抱箍环（齿条转向时从环中轴向滑过）
+  rod(g, V(-20,10.5,26), V(-20,29.5,33), 1.8, 1.8, MAT.frame, 14);
+  rod(g, V( 20,10.5,26), V( 20,29.5,33), 1.8, 1.8, MAT.frame, 14);
+  for (const sx of [-1, 1]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4.2, 1.1, 12, 28), MAT.dark);
+    ring.position.set(sx*20, 30, 33);
+    ring.rotation.y = Math.PI/2;                    // 环面轴线沿 X，套在齿条上
+    addMesh(g, ring, false);
+  }
+  const sides = {};
+  for (const s of [-1, 1]) {
+    const rackEnd = V(s*44, 30, 33);
+    const armEnd  = V(s*57, 36.5, 28);              // 与转向节摇臂球头座对接
+    const rb = ball(g, rackEnd, 2.6, MAT.dark, 16);
+    const tie = rod(g, rackEnd, armEnd, 2.2, 2.2, MAT.link, 14);
+    // 横拉杆端球关节总成：大球头 + 金属锁紧箍环 + 锥形防尘套（朝齿条方向）
+    const ab = ball(g, armEnd, 3.6, MAT.link, 18);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(5.2, 1.4, 12, 28), MAT.dark);
+    ring.position.copy(armEnd);
+    ring.quaternion.setFromUnitVectors(V(0,0,1), rackEnd.clone().sub(armEnd).normalize());
+    addMesh(g, ring, true);
+    const boot = rod(g, armEnd, armEnd.clone().lerp(rackEnd, 0.16), 4.0, 2.0, MAT.boot, 14);
+    sides[s] = { rackEndRest:rackEnd.clone(), armEndRest:armEnd.clone(),
+                 meshes:{ rb, tie, ab, boot, ring } };
+  }
+  return { group:g, meshes:{ rackRod, rackBox }, sides };
+}
+
+/* ---- 车身（减震塔 + 纵梁/横梁 + 轮拱钣金） ---- */
+function buildBody() {
+  const g = makePart('车身（减震塔/车架）', '#cf8a72', V(0, 80, 0));
+  const panelMat = MAT.body.clone();
+  panelMat.side = THREE.DoubleSide;                 // 钣金薄板双面可见
+  for (const s of [-1, 1]) {
+    const T = V(s*58, 152, -6);                     // 减震器塔顶安装点
+    // 减震塔（锥形钣金座，包裹减震器顶胶）
+    rod(g, V(T.x, 150, T.z), V(T.x, 168, T.z), 9, 16, MAT.body, 28);
+    rod(g, V(T.x, 168, T.z), V(T.x, 173, T.z), 16, 16, MAT.body, 28);
+    // 轮拱钣金（车轮上方半圆柱面）
+    const arch = new THREE.Mesh(
+      new THREE.CylinderGeometry(48, 48, 16, 48, 1, true, 0, Math.PI), panelMat);
+    arch.position.set(s*82, 42, 0);
+    arch.rotation.z = Math.PI/2;
+    addMesh(g, arch, true, 20);
+    // 轮拱顶 → 减震塔 连接梁
+    rod(g, V(s*60, 160, 2), V(s*82, 92, -2), 4, 4, MAT.body, 18);
+    // 车架纵梁（前围 → 散热器支架）
+    rod(g, V(s*42, 150, -24), V(s*52, 144, 52), 4, 4, MAT.body, 18);
+    rod(g, V(T.x, 168, -8), V(s*42, 150, -24), 4, 4, MAT.body, 18);
+  }
+  rod(g, V(-58,173,-10), V(58,173,-10), 5.5, 5.5, MAT.body, 22);  // 前围上横梁
+  rod(g, V(-52,146,52), V(52,146,52), 4.5, 4.5, MAT.body, 20);    // 散热器支架横梁
+  return g;
+}
+
+/* ---- 副车架（安装基准，非教学标注部件） ---- */
+function buildSubframe() {
+  const g = new THREE.Group();
+  scene.add(g);
+  const put = (a,b,r) => { const m = cyl(a,b,r,r,MAT.frame,20,false); addMesh(g,m,true); };
+  put(V(-24,10,-30), V(-24,10,30), 3.2);      // 左纵梁
+  put(V( 24,10,-30), V( 24,10,30), 3.2);      // 右纵梁
+  put(V(-24,8.5,26), V(24,8.5,26), 3.2);      // 前横梁
+  put(V(-24,8.5,-24), V(24,8.5,-24), 3.2);    // 后横梁
+  put(V(-32,8,0), V(32,8,0), 3.6);            // 稳定杆安装横梁
+  return g;
+}
+
+/* ---- 组装整车前桥（左右对称），收集运动学引用 ---- */
+const subframeG = buildSubframe();
+const diffG = buildDifferential();   // 外部系统：差速器（半轴内端安装基础）
+const barB = buildSwayBar();
+const bodyB = buildBody();           // 外部系统：车身
+const steerB = buildSteering();      // 外部系统：转向机与横拉杆
+const side = {};
+for (const s of [-1, 1]) {
+  const strutB = buildStrut(s);
+  const springB = buildSpring(s);
+  const knB = buildKnuckle(s);
+  const armG = buildArm(s, knB.BJ);
+  const linkB = buildLink(s, s < 0 ? barB.tipL : barB.tipR, V(s*54, 24, 10));
+  const shaftB = buildHalfShaft(s);  // 外部系统：半轴
+  const wheelB = buildWheel(s);      // 外部系统：车轮
+  side[s] = { strutB, springB, knB, armG, linkB, shaftB, wheelB };
+}
+
+/* ================= 运动层级（机构装配） =================
+   簧载：bodyRig（车身/副车架/稳定杆/转向机/各部件车身侧）
+   非簧载（每侧）：jumpRig 上下跳动 → steerRig 绕轮心转向
+   下控制臂：lcaRig 绕前后衬套连线摆动（在 bodyRig 坐标下） */
+const bodyRig = new THREE.Group();
+bodyRig.position.set(0, 120, 0);
+scene.add(bodyRig);
+[ bodyB, subframeG, diffG, barB.group, steerB.group ].forEach(o => bodyRig.attach(o));
+
+const wheelMecha = [];
+for (const s of [-1, 1]) {
+  const d = side[s];
+  bodyRig.attach(d.strutB.group);
+  bodyRig.attach(d.springB.group);
+  bodyRig.attach(d.armG);
+  bodyRig.attach(d.linkB.group);
+  bodyRig.attach(d.shaftB.group);
+
+  // 轮侧：跳动 rig（根） → 转向 rig（外层对齐主销轴=减震筒轴线，内层绕主销旋转）
+  const jumpRig = new THREE.Group();
+  scene.add(jumpRig);
+  const ax = strutAxis(s);
+  const steerRig = new THREE.Group();
+  steerRig.position.copy(ax.at(0.02));               // 位于主销轴线上（抱箍中心处）
+  steerRig.quaternion.setFromUnitVectors(V(0,1,0), ax.u.clone().normalize());
+  jumpRig.add(steerRig);
+  const steerSpin = new THREE.Group();               // 转向/外倾旋转层（绕主销）
+  steerRig.add(steerSpin);
+  const hubMark = new THREE.Object3D();              // 轮毂中心标记
+  hubMark.position.copy(d.knB.W);
+  scene.add(hubMark); steerSpin.attach(hubMark);
+  const tieMark = new THREE.Object3D();              // 转向拉杆外球头标记
+  tieMark.position.copy(V(s*57,36.5,28));
+  scene.add(tieMark); steerSpin.attach(tieMark);
+  steerSpin.attach(d.knB.group);
+  steerSpin.attach(d.wheelB.group);
+
+  // 下控制臂摆动枢轴（前后衬套连线）
+  const F = V(s*23,17,26), R = V(s*23,14,-24);
+  const M = F.clone().add(R).multiplyScalar(0.5);
+  const lcaRig = new THREE.Group();
+  scene.add(lcaRig);
+  lcaRig.position.copy(M);
+  bodyRig.attach(lcaRig);                            // 转入车身坐标
+  lcaRig.attach(d.armG);
+  const nAxis = R.clone().sub(F).normalize();        // 枢轴方向
+  const w = new THREE.Vector3().crossVectors(nAxis, d.knB.BJ.clone().sub(M));
+  const lcaSign = w.y >= 0 ? 1 : -1;                 // 自动判定旋转符号
+  const lcaK = 1 / Math.abs(w.y);                    // 行程 → 摆角系数
+
+  wheelMecha.push({
+    s, d, jumpRig, steerRig, steerSpin, hubMark, tieMark,
+    lcaRig, nAxis, lcaSign, lcaK,
+    h: 0, j: 0, spin: 0,
+  });
+}
+/* 运动层级建立后：把随动端点的世界静止坐标换算为 bodyRig 局部坐标（唯一基准） */
+bodyRig.updateWorldMatrix(true, false);
+for (const m of wheelMecha) {
+  const { s, d } = m;
+  d.linkB.lugRest = bodyRig.worldToLocal(d.linkB.lugRest.clone()).add(V(0,120,0));
+  d.linkB.tipRest = bodyRig.worldToLocal(d.linkB.tipRest.clone()).add(V(0,120,0));
+  d.shaftB.innerRest = bodyRig.worldToLocal(d.shaftB.innerRest.clone()).add(V(0,120,0));
+  steerB.sides[s].rackEndRest = bodyRig.worldToLocal(steerB.sides[s].rackEndRest.clone()).add(V(0,120,0));
+}
+/* 装配完成后记录各部件的局部装配位置（爆炸视图与重置的唯一正确基准） */
+for (const p of parts) p.userData.base.copy(p.position);
+/* 转向：记录横拉杆定长求解所需的几何参数 */
+bodyRig.updateWorldMatrix(true, true);
+for (const m of wheelMecha) {
+  m.jumpRig.updateWorldMatrix(true, true);
+  m.tieLocal = m.tieMark.position.clone();          // 转向摇臂外点在主销局部系的位置
+  m.steer = 0;                                       // 每侧实际转向角
+  m.L0 = rackLocGL(m, 0).distanceTo(tieLocGL(m, 0)); // 横拉杆静止长度
+}
+
+/* ================= 路面激励（驶过的凸台） ================= */
+const bumpMat = new THREE.MeshStandardMaterial({ color:0x484e56, roughness:0.9, metalness:0.05 });
+function makeBump(h, width, xc, phase) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, h, 16), bumpMat);
+  mesh.position.set(xc, h/2, 0);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), lineMat);
+  mesh.add(e);
+  scene.add(mesh);
+  return { mesh, h, xc, phase };
+}
+const bumps = [
+  makeBump(7, 260, 0, 0),                            // 全宽减速带（双侧上跳 → 俯仰/上下）
+  makeBump(6, 90, -82, 150),                         // 单侧凸台（仅左轮 → 侧倾+稳定杆扭转）
+];
+const ROAD_SPEED = 34, ROAD_LOOP = 300;
+const roadH = (s, travel) => {
+  let h = 0;
+  for (const b of bumps) {
+    const zB = 150 - ((travel + b.phase) % ROAD_LOOP);
+    const dz = -zB;                                  // 车轮接触点 z=0
+    if (Math.abs(dz) < 10) {
+      const prof = 0.5 * (1 + Math.cos(dz * Math.PI / 10));
+      const lat = b.xc === 0 ? 1                          // 全宽减速带
+                           : Math.max(0, 1 - Math.abs(s*82 - b.xc) / 45); // 单侧凸台
+      h += b.h * prof * lat;
+    }
+  }
+  return h;
+};
+
+/* ================= 动力学状态与更新 ================= */
+const dyn = {
+  auto: true,
+  roadT: 0,
+  bodyHeave: 0, bodyRoll: 0, steer: 0,
+  rackShift: 0, rackShiftPrev: 0,
+};
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
+/* 转向几何求解：横拉杆保持定长，且左右轮角不同（阿克曼），避免齿条/拉杆被拉伸形变 */
+function armWorld(m, th) {            // 转向摇臂外点世界坐标
+  m.steerSpin.rotation.y = th;        // 同步 quaternion（与模型一致）
+  return m.tieLocal.clone().applyQuaternion(m.steerSpin.quaternion).applyMatrix4(m.steerRig.matrixWorld);
+}
+function tieLocGL(m, th) {            // 横拉杆外点（转向摇臂球头）——组内坐标系
+  return bodyRig.worldToLocal(armWorld(m, th)).add(_V120);
+}
+function rackLocGL(m, rs) {           // 横拉杆内点（齿条端）——组内坐标系
+  return steerB.sides[m.s].rackEndRest.clone().add(V(rs,0,0));
+}
+function solveRightAngle(mR, rs) {    // 由齿条位移推出右轮转向角（横拉杆定长）
+  const R = rackLocGL(mR, rs);
+  const target = mR.L0;
+  const f = th => R.clone().sub(tieLocGL(mR, th)).length() - target;
+  const hint = dyn.steer;
+  // 在 hint 附近搜索所有符号变化区间，取离 hint 最近的那个根（物理正确解）
+  const lo = hint - 0.6, hi = hint + 0.6, N = 40;
+  let best = hint, bestv = Math.abs(f(hint));
+  let pt = lo, pv = f(lo); if (Math.abs(pv) < bestv) { bestv = Math.abs(pv); best = lo; }
+  const brs = [];
+  for (let i = 1; i <= N; i++) {
+    const th = lo + (hi - lo) * i / N, v = f(th);
+    if (Math.abs(v) < bestv) { bestv = Math.abs(v); best = th; }
+    if (pv * v < 0) brs.push([pt, th, Math.abs((pt + th) / 2 - hint)]);
+    pt = th; pv = v;
+  }
+  if (brs.length) {
+    brs.sort((a, b) => a[2] - b[2]);
+    let a = brs[0][0], b = brs[0][1], fa = f(a);
+    for (let k = 0; k < 24; k++) { const c = (a + b) / 2, fc = f(c); if (fa * fc <= 0) { b = c; } else { a = c; fa = fc; } }
+    best = (a + b) / 2;
+  }
+  return best;
+}
+
+/* ================= 竖向位移信号 r(t) / y1(t) / y2(t) 及可视化 ================= */
+const TRACE = { N: 200, dz: 0.7, groundN: 151 };   // 严格按物理量，不做任何放大
+bodyRig.updateWorldMatrix(true, true);
+for (const m of wheelMecha) {
+  m.jumpRig.updateWorldMatrix(true, true);
+  const p = m.d.strutB.topMark.getWorldPosition(new THREE.Vector3());
+  m.topX = p.x; m.topRest = p.y; m.topZ = p.z;
+}
+const _mL = wheelMecha.find(m => m.s === -1), _mR = wheelMecha.find(m => m.s === 1);
+TRACE.y1X = _mL.topX; TRACE.y1Rest = _mL.topRest; TRACE.y1Z = _mL.topZ;
+TRACE.y2X = _mR.topX; TRACE.y2Rest = _mR.topRest; TRACE.y2Z = _mR.topZ;
+TRACE.r = new Array(TRACE.N).fill(0);
+TRACE.y1 = new Array(TRACE.N).fill(TRACE.y1Rest);
+TRACE.y2 = new Array(TRACE.N).fill(TRACE.y2Rest);
+function makeTraceLine(color, n) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95 }));
+  line.frustumCulled = false;
+  scene.add(line);
+  return line;
+}
+const groundLineL = makeTraceLine(0xff9f43, TRACE.groundN);
+const groundLineR = makeTraceLine(0xff9f43, TRACE.groundN);
+const y1Line = makeTraceLine(0x2ec4e8, TRACE.N);
+const y2Line = makeTraceLine(0x51cf66, TRACE.N);
+/* 世界坐标 (x,z) 处的地面高度（与 roadH 一致的凸台剖面） */
+function groundAt(xWorld, zWorld, travel) {
+  let h = 0;
+  for (const b of bumps) {
+    const zB = 150 - ((travel + b.phase) % ROAD_LOOP);
+    const dz = zWorld - zB;
+    if (Math.abs(dz) < 10) {
+      const prof = 0.5 * (1 + Math.cos(dz * Math.PI / 10));
+      const lat = b.xc === 0 ? 1 : Math.max(0, 1 - Math.abs(xWorld - b.xc) / 45);
+      h += b.h * prof * lat;
+    }
+  }
+  return h;
+}
+const traceOn = { r: true, y1: true, y2: true };
+const chart = document.getElementById('chart');
+const cctx = chart.getContext('2d');
+function drawChart() {
+  const W = chart.width, H = chart.height, pad = 16;
+  cctx.clearRect(0, 0, W, H);
+  let lo = 0, hi = 0.001;
+  const consider = (arr, base) => { for (let i = 0; i < arr.length; i++) { const v = arr[i] - base; if (v < lo) lo = v; if (v > hi) hi = v; } };
+  if (traceOn.r) consider(TRACE.r, 0);
+  if (traceOn.y1) consider(TRACE.y1, TRACE.y1Rest);
+  if (traceOn.y2) consider(TRACE.y2, TRACE.y2Rest);
+  const sp = Math.max(1e-3, hi - lo); lo -= sp * 0.12; hi += sp * 0.12;
+  const X = i => pad + (i / (TRACE.N - 1)) * (W - pad * 2);
+  const Y = v => H - pad - ((v - lo) / (hi - lo)) * (H - pad * 2);
+  cctx.strokeStyle = 'rgba(255,255,255,.13)'; cctx.lineWidth = 1;
+  cctx.beginPath(); cctx.moveTo(pad, H - pad); cctx.lineTo(W - pad, H - pad); cctx.stroke();
+  cctx.beginPath(); cctx.moveTo(pad, pad); cctx.lineTo(pad, H - pad); cctx.stroke();
+  cctx.strokeStyle = 'rgba(255,255,255,.22)'; cctx.setLineDash([3, 3]);
+  cctx.beginPath(); cctx.moveTo(pad, Y(0)); cctx.lineTo(W - pad, Y(0)); cctx.stroke(); cctx.setLineDash([]);
+  const plot = (arr, base, color) => {
+    cctx.strokeStyle = color; cctx.lineWidth = 1.6; cctx.beginPath();
+    for (let i = 0; i < TRACE.N; i++) { const px = X(i), py = Y(arr[i] - base); if (i === 0) cctx.moveTo(px, py); else cctx.lineTo(px, py); }
+    cctx.stroke();
+  };
+  if (traceOn.r) plot(TRACE.r, 0, '#ff9f43');
+  if (traceOn.y1) plot(TRACE.y1, TRACE.y1Rest, '#2ec4e8');
+  if (traceOn.y2) plot(TRACE.y2, TRACE.y2Rest, '#51cf66');
+}
+
+function updateDynamics(dt) {
+  if (dyn.auto) dyn.roadT += dt * ROAD_SPEED;
+  // 凸台路面位置（路面从车头 z+ 方向驶来，从车后 z- 驶离）
+  for (const b of bumps) {
+    b.mesh.position.z = 150 - ((dyn.roadT + b.phase) % ROAD_LOOP);
+  }
+
+  // 1) 车轮目标高度：自动=路面激励；手动=滑块
+  for (const m of wheelMecha) {
+    const target = dyn.auto ? roadH(m.s, dyn.roadT)
+                            : (m.s < 0 ? +slL.value : +slR.value);
+    m.h += (target - m.h) * (dyn.auto ? 0.32 : 0.22);  // 非簧载快速跟随
+  }
+  const mL = wheelMecha.find(m => m.s === -1), mR = wheelMecha.find(m => m.s === 1);
+
+  // 2) 簧载车身：滞后滤波的上下 + 侧倾（左轮升→左车身角上抬，即绕 Z 负向）
+  const meanH = (mL.h + mR.h) * 0.5;
+  dyn.bodyHeave += (meanH - dyn.bodyHeave) * 0.06;
+  const rollTarget = -0.004 * (mL.h - mR.h);   // 12mm 行程差 ≈ 2.75° 侧倾
+  dyn.bodyRoll += (rollTarget - dyn.bodyRoll) * 0.08;
+
+  // 3) 车身姿态
+  bodyRig.position.y = 120 + dyn.bodyHeave;
+  bodyRig.rotation.z = dyn.bodyRoll;
+
+  // 4) 每侧运动学
+  for (const m of wheelMecha) {
+    const { s, d } = m;
+    // 车身在该侧减震塔处的实际位移（起伏 + 侧倾），悬挂压缩量 = 轮跳 − 车身位移
+    const bodyDisp = dyn.bodyHeave + s*70*Math.sin(dyn.bodyRoll);
+    m.j = THREE.MathUtils.clamp(m.h - bodyDisp, -6, 12);
+    m.jumpRig.position.y = m.h;                        // 车轮/转向节整体跳动
+    m.steerSpin.rotation.y = 0;                        // 转向角在第 5b 步转向解算中设置
+    m.steerSpin.rotation.z = s * 0.006 * m.j;          // 外倾角变化
+    m.lcaRig.quaternion.setFromAxisAngle(m.nAxis, m.lcaSign * m.j * m.lcaK); // 控制臂摆动
+    d.strutB.gW.position.set(0, m.j, 0);               // 缸筒轮侧随动
+    barB.arms[s].rig.rotation.x = -0.88 * m.j / 24;    // 稳定杆端臂扭转
+    // 弹簧压缩：下端面随轮侧升起、沿轴长度缩短
+    d.springB.spRig.position.set(d.springB.a.x, d.springB.a.y + m.j, d.springB.a.z);
+    d.springB.spRig.scale.y = Math.max(0.55, 1 - m.j * d.springB.uy / d.springB.L);
+    if (dyn.auto) m.spin += dt * ROAD_SPEED / 33;      // 车轮滚动
+    d.wheelB.spinRig.rotation.x = m.spin;
+  }
+
+  // 5) 更新世界矩阵后，计算随动连杆（车身局部坐标）
+  bodyRig.updateWorldMatrix(true, true);
+  for (const m of wheelMecha) m.jumpRig.updateWorldMatrix(true, true);
+
+  // 5b) 转向：两轮转角相同（dyn.steer），齿条位移使两侧横拉杆尽量保持定长（刚性整体）
+  {
+    const mL = wheelMecha.find(m => m.s === -1), mR = wheelMecha.find(m => m.s === 1);
+    const th = dyn.steer;
+    mL.steer = th; mR.steer = th;   // 严格相等：一轮的转动经齿条+拉杆刚性传导到另一轮
+    const dev = rs => {
+      let e = 0;
+      for (const m of [mL, mR]) { const L = rackLocGL(m, rs).sub(tieLocGL(m, th)).length(); const dL = L - m.L0; e += dL * dL; }
+      return e;
+    };
+    let rs = dyn.rackShiftPrev, best = dev(rs);
+    for (let x = -16; x <= 16; x += 0.5) { const d = dev(x); if (d < best) { best = d; rs = x; } }
+    for (let x = rs - 0.5; x <= rs + 0.5; x += 0.05) { const d = dev(x); if (d < best) { best = d; rs = x; } }
+    dyn.rackShift = rs; dyn.rackShiftPrev = rs;
+    mL.steerSpin.rotation.y = mL.steer;
+    mR.steerSpin.rotation.y = mR.steer;
+    steerB.meshes.rackRod.position.x = rs;
+    steerB.meshes.rackBox.position.x = rs;
+    for (const m of wheelMecha) m.jumpRig.updateWorldMatrix(true, true);
+  }
+
+  const freezeLinks = explodeT > 0.02;                 // 爆炸视图下连杆保持静态
+  if (!freezeLinks) {
+    for (const m of wheelMecha) {
+      const { s, d } = m;
+      // 连接杆：稳定杆端尖（扭转后） → 减震筒凸台（轮侧升起）
+      barB.arms[s].tipMark.getWorldPosition(_v1);
+      const tipLoc = bodyRig.worldToLocal(_v1.clone()).add(V(0,120,0));
+      d.armG.userData.swayMark.getWorldPosition(_v2);
+      const lugLoc = bodyRig.worldToLocal(_v2.clone()).add(V(0,120,0));
+      setRod(d.linkB.meshes.main, tipLoc, lugLoc);
+      setRod(d.linkB.meshes.proxy, tipLoc, lugLoc);
+      setBall(d.linkB.meshes.ballBot, tipLoc);
+      setBall(d.linkB.meshes.ballTop, lugLoc);
+      setRod(d.linkB.meshes.endBot, tipLoc, tipLoc.clone().lerp(lugLoc, 0.12));
+      setRod(d.linkB.meshes.endTop, lugLoc, lugLoc.clone().lerp(tipLoc, 0.12));
+
+      // 半轴：差速器端固定 → 轮毂端随轮
+      m.hubMark.getWorldPosition(_v2);
+      const hubLoc = bodyRig.worldToLocal(_v2.clone()).add(V(0,120,0));
+      const inLoc = d.shaftB.innerRest;
+      setRod(d.shaftB.meshes.shaft,
+        inLoc.clone().lerp(hubLoc, 0.14), hubLoc.clone().lerp(inLoc, 0.14));
+      setBall(d.shaftB.meshes.ballOut, hubLoc);
+      setRod(d.shaftB.meshes.bootOut, hubLoc, hubLoc.clone().lerp(inLoc, 0.16));
+
+      // 转向横拉杆：齿条端横移 → 转向摇臂外点随动
+      const rackShift = dyn.rackShift;   // 由转向解算得到的齿条位移
+      const rackLoc = steerB.sides[s].rackEndRest.clone().add(V(rackShift, 0, 0));
+      m.tieMark.getWorldPosition(_v3);
+      const tieLoc = bodyRig.worldToLocal(_v3.clone()).add(V(0,120,0));
+      setRod(steerB.sides[s].meshes.tie, rackLoc, tieLoc);
+      setBall(steerB.sides[s].meshes.rb, rackLoc);
+      setBall(steerB.sides[s].meshes.ab, tieLoc);
+      setRod(steerB.sides[s].meshes.boot, tieLoc, tieLoc.clone().lerp(rackLoc, 0.16));
+      // 球关节箍环：位置跟随，朝向对齐横拉杆
+      steerB.sides[s].meshes.ring.position.copy(tieLoc);
+      steerB.sides[s].meshes.ring.quaternion.setFromUnitVectors(V(0,0,1), rackLoc.clone().sub(tieLoc).normalize());
+      steerB.meshes.rackRod.position.x = rackShift;
+      steerB.meshes.rackBox.position.x = rackShift;
+    }
+  }
+
+  // 5c) 竖向位移信号 r(t)/y1(t)/y2(t) 采样与可视化
+  {
+    const rNow = roadH(-1, dyn.roadT);                 // 地面输入（左轮下方路面）
+    let y1Now = TRACE.y1Rest, y2Now = TRACE.y2Rest;
+    for (const m of wheelMecha) {
+      m.d.strutB.topMark.getWorldPosition(_v1);
+      if (m.s < 0) y1Now = _v1.y; else y2Now = _v1.y;
+    }
+    TRACE.r.push(rNow); TRACE.r.shift();
+    TRACE.y1.push(y1Now); TRACE.y1.shift();
+    TRACE.y2.push(y2Now); TRACE.y2.shift();
+    // 地面线（轮子滚过的线）
+    const gp = (line, xw) => {
+      const pos = line.geometry.attributes.position;
+      for (let i = 0; i < TRACE.groundN; i++) {
+        const z = -150 + i * (300 / (TRACE.groundN - 1));
+        pos.setXYZ(i, xw, groundAt(xw, z, dyn.roadT) + 0.6, z);
+      }
+      pos.needsUpdate = true;
+    };
+    if (groundLineL.visible) gp(groundLineL, -82);
+    if (groundLineR.visible) gp(groundLineR, 82);
+    // 支柱顶面中心点轨迹（沿 -z 拖尾）
+    const tp = (line, xw, zw, buf) => {
+      const pos = line.geometry.attributes.position;
+      for (let i = 0; i < TRACE.N; i++) pos.setXYZ(i, xw, buf[i], zw - (TRACE.N - 1 - i) * TRACE.dz);
+      pos.needsUpdate = true;
+    };
+    if (y1Line.visible) tp(y1Line, TRACE.y1X, TRACE.y1Z, TRACE.y1);
+    if (y2Line.visible) tp(y2Line, TRACE.y2X, TRACE.y2Z, TRACE.y2);
+    drawChart();
+  }
+
+  // 6) 读数面板
+  statStroke.textContent = `L ${(mL.j*8).toFixed(0)} / R ${(mR.j*8).toFixed(0)} mm`;
+  statRoll.textContent = (dyn.bodyRoll * 180 / Math.PI).toFixed(1) + '°';
+  const twist = (0.88 * (mL.j - mR.j) / 24) * 180 / Math.PI;
+  statTwist.textContent = twist.toFixed(1) + '°';
+  statSteer.textContent = (dyn.steer * 180 / Math.PI).toFixed(1) + '°';
+  // 自动模式下同步滑块显示
+  if (dyn.auto) { slL.value = mL.h.toFixed(1); slR.value = mR.h.toFixed(1); }
+}
+
+/* ================= 部件标签（CSS2D） ================= */
+function addLabel(group, text, anchor) {
+  const el = document.createElement('div');
+  el.className = 'lab';
+  el.innerHTML = `<i style="background:${group.userData.accent}"></i>${text}`;
+  const obj = new CSS2DObject(el);
+  obj.position.copy(anchor);
+  group.add(obj);
+  // 锚点标记小球
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(1.1, 12, 10),
+    new THREE.MeshBasicMaterial({ color:new THREE.Color(group.userData.accent) })
+  );
+  dot.position.copy(anchor);
+  group.add(dot);
+  return el;
+}
+{
+  const s = -1; // 标签统一标注左侧
+  const ax = strutAxis(s);
+  const W = V(s*82, 42, 0);
+  const BJ = V(s*70, 27, 3), F = V(s*23,17,26);
+  const byName = n => parts.find(p => p.userData.name === n);
+
+  addLabel(byName('螺旋弹簧'),    '螺旋弹簧',   ax.at(0.57).add(V(s*15, 3, 0)));
+  addLabel(byName('减震器筒'),    '减震器筒',   ax.at(0.45).add(V(s*9, 0, 0)));
+  addLabel(byName('转向节（羊角）'),'转向节（羊角）', W.clone().add(V(s*13, 9, 6)));
+  addLabel(byName('下控制臂'),    '下控制臂',   F.clone().lerp(BJ,0.5).add(V(0,-9,0)));
+  addLabel(byName('横向稳定杆'),  '横向稳定杆', V(0, 29, -4));
+  const linkTip = barB.tipL, linkLug = V(s*54, 24, 10);
+  addLabel(byName('连接杆'),      '连接杆',     linkTip.clone().lerp(linkLug,0.5).add(V(s*10,0,0)));
+  /* ---- 外部系统标签 ---- */
+  addLabel(byName('车轮'),             '车轮（轮胎·轮毂）', V(s*82, 92, 6));
+  addLabel(byName('半轴（传动轴）'),   '半轴（传动轴）',    V(s*44, 58, 8));
+  addLabel(byName('转向机与横拉杆'),   '转向机与横拉杆',    V(s*30, 45, 50));
+  addLabel(byName('车身（减震塔/车架）'),'车身（减震塔）',   V(s*14, 182, -14));
+}
+
+/* 图例（按部件名去重：点击整行高亮选中该部件；行内“显/隐”按钮切换可见性） */
+const legend = document.getElementById('legend');
+const activeNames = new Set();          // 选中的部件名（支持多选）
+const hiddenNames = new Set();          // 隐藏的部件名
+const legendRows = new Map();           // 部件名 -> 图例行
+const seen = new Set();
+for (const p of parts) {
+  if (seen.has(p.userData.name)) continue;
+  seen.add(p.userData.name);
+  const name = p.userData.name;
+  const row = document.createElement('div');
+  row.className = 'lg';
+  row.dataset.name = name;
+  row.innerHTML = `<i style="background:${p.userData.accent}"></i><span class="nm">${name}</span><button class="eye" title="隐藏该部件">隐</button>`;
+  row.onclick = () => flash(name);
+  const eye = row.querySelector('.eye');
+  eye.onclick = (e) => { e.stopPropagation(); toggleVisible(name); };
+  legend.appendChild(row);
+  legendRows.set(name, row);
+}
+/* 选中状态（多选）：点击模型部件或图例行切换选中；点击空白处清空 */
+function toggleSelect(name) {
+  if (activeNames.has(name)) activeNames.delete(name);
+  else activeNames.add(name);
+  const row = legendRows.get(name);
+  if (row) row.classList.toggle('on', activeNames.has(name));
+}
+function flash(target) {
+  toggleSelect(typeof target === 'string' ? target : target.userData.name);
+}
+function toggleVisible(name) {
+  const nowHidden = hiddenNames.has(name);
+  if (nowHidden) hiddenNames.delete(name); else hiddenNames.add(name);
+  for (const p of parts) if (p.userData.name === name) p.visible = !hiddenNames.has(name);
+  const row = legendRows.get(name);
+  if (row) {
+    const eye = row.querySelector('.eye');
+    if (eye) { eye.textContent = hiddenNames.has(name) ? '显' : '隐'; eye.classList.toggle('off', hiddenNames.has(name)); eye.title = hiddenNames.has(name) ? '显示该部件' : '隐藏该部件'; }
+  }
+}
+
+/* ================= 交互 ================= */
+let labelsOn = true, darkTheme = true;
+const btnPlay  = document.getElementById('btnPlay');
+const btnLabel = document.getElementById('btnLabel');
+const btnRot   = document.getElementById('btnRot');
+const btnTheme = document.getElementById('btnTheme');
+const btnReset = document.getElementById('btnReset');
+const expSlider = document.getElementById('explode');
+const expVal = document.getElementById('expVal');
+const slL = document.getElementById('slL');
+const slR = document.getElementById('slR');
+const slSteer = document.getElementById('slSteer');
+const statStroke = document.getElementById('statStroke');
+const statRoll   = document.getElementById('statRoll');
+const statTwist  = document.getElementById('statTwist');
+const statSteer  = document.getElementById('statSteer');
+
+btnPlay.onclick = () => {
+  dyn.auto = !dyn.auto;
+  btnPlay.classList.toggle('on', dyn.auto);
+  btnPlay.textContent = dyn.auto ? '⏸ 暂停演示' : '▶ 开始演示';
+};
+// 手动拖动行程滑块 → 退出自动模式
+const stopAuto = () => {
+  dyn.auto = false;
+  btnPlay.classList.remove('on');
+  btnPlay.textContent = '▶ 开始演示';
+};
+slL.oninput = stopAuto;
+slR.oninput = stopAuto;
+slSteer.oninput = () => { dyn.steer = (+slSteer.value) * Math.PI/180; };
+
+btnLabel.onclick = () => {
+  labelsOn = !labelsOn;
+  btnLabel.classList.toggle('on', labelsOn);
+  labelRenderer.domElement.style.display = labelsOn ? '' : 'none';
+};
+btnRot.onclick = () => {
+  controls.autoRotate = !controls.autoRotate;
+  btnRot.classList.toggle('on', controls.autoRotate);
+};
+btnTheme.onclick = () => {
+  darkTheme = !darkTheme;
+  document.body.classList.toggle('light', !darkTheme);
+  scene.background.set(darkTheme ? 0x15181c : 0xe9edf1);
+  groundMat.color.set(darkTheme ? 0x2b2f35 : 0xd6dbe0);
+  bumpMat.color.set(darkTheme ? 0x484e56 : 0xb7bdc4);
+  grid.material.opacity = darkTheme ? 0.22 : 0.30;
+  btnTheme.textContent = darkTheme ? '浅色主题' : '深色主题';
+};
+btnReset.onclick = () => {
+  camera.position.copy(CAM_HOME);
+  controls.target.copy(TGT_HOME);
+  expSlider.value = 0; expVal.textContent = '0%';
+  applyExplode(0);
+  slSteer.value = 0; dyn.steer = 0;
+  slL.value = 0; slR.value = 0;   // 行程目标归零，悬挂回到静平衡位置
+};
+
+// 位移曲线显隐
+document.getElementById('cbR').onchange = e => { traceOn.r = e.target.checked; groundLineL.visible = groundLineR.visible = e.target.checked; };
+document.getElementById('cbY1').onchange = e => { traceOn.y1 = e.target.checked; y1Line.visible = e.target.checked; };
+document.getElementById('cbY2').onchange = e => { traceOn.y2 = e.target.checked; y2Line.visible = e.target.checked; };
+
+let explodeT = 0;
+function applyExplode(t) {
+  explodeT = t;
+  for (const p of parts) {
+    p.position.copy(p.userData.base).addScaledVector(p.userData.explode, t);
+  }
+}
+expSlider.oninput = () => {
+  const v = +expSlider.value / 100;
+  expVal.textContent = expSlider.value + '%';
+  applyExplode(v);
+};
+
+/* 点击高亮 */
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let downPos = null;
+renderer.domElement.addEventListener('pointerdown', e => { downPos = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downPos) return;
+  const dx = e.clientX - downPos[0], dy = e.clientY - downPos[1];
+  downPos = null;
+  if (dx*dx + dy*dy > 36) return;               // 拖拽旋转，不算点击
+  mouse.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(mouse, camera);
+  // 只拾取当前可见的部件（隐藏的部件不参与拾取）
+  const pick = pickables.filter(m => { let o = m; while (o && !o.userData.name) o = o.parent; return (o && o.userData.name) ? o.visible : true; });
+  const hits = ray.intersectObjects(pick, false);
+  if (hits.length) {
+    let o = hits[0].object;
+    while (o && !o.userData.name) o = o.parent;
+    if (o) flash(o);
+  } else {
+    for (const n of [...activeNames]) toggleSelect(n);   // 点击空白处清空所有高亮
+  }
+});
+
+/* ================= 渲染循环 ================= */
+const clock = new THREE.Clock();
+const flashColor = new THREE.Color(0x2f6fd0);
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  updateDynamics(dt);
+  controls.update();
+  for (const p of parts) {
+    const target = activeNames.has(p.userData.name) ? 1 : 0;
+    p.userData.flash += (target - p.userData.flash) * 0.18;   // 平滑过渡
+    const f = p.userData.flash;
+    if (f > 0.005) for (const m of p.userData.meshes) {
+      m.material.emissive.copy(flashColor);
+      m.material.emissiveIntensity = f * 0.7;
+    }
+  }
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

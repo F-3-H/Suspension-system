@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>弹簧轮胎系统 · 竖向振动互动可视化</title>
+<style>
+  :root{
+    --bg:#f3f6fb; --card:#ffffff; --ink:#16203a; --muted:#5d6c86; --line:#dce4f0;
+    --blue:#2563eb; --orange:#e0721a; --green:#0f9d76; --red:#dc2626;
+    --shadow:0 1px 2px rgba(16,24,40,.06), 0 10px 28px rgba(16,24,40,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.55;
+    padding:20px 20px 48px;
+  }
+  .wrap{max-width:1440px;margin:0 auto}
+
+  header h1{font-size:20px;margin:0 0 4px;letter-spacing:.2px}
+  header p{margin:0;color:var(--muted);font-size:13.5px}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .pill.in{background:#e8f0ff;color:#1d4ed8}
+  .pill.out{background:#fdf0e4;color:#b45309}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);gap:16px;margin-top:16px}
+  @media (max-width:1080px){.grid{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .card h2{font-size:13px;margin:0;padding:12px 16px;border-bottom:1px solid var(--line);
+    color:var(--muted);font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+  .card .body{padding:14px 16px}
+
+  canvas{display:block;width:100%;border-radius:0 0 14px 14px}
+  #scene{height:400px}
+  #plot{height:210px}
+
+  /* 控制面板 */
+  .group{margin-bottom:16px}
+  .group:last-child{margin-bottom:2px}
+  .group-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .group-head b{font-size:13.5px}
+  .group-head span{font-size:11.5px;color:var(--muted)}
+  .row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;margin:9px 0}
+  .row label{font-size:13px;color:#33405c}
+  .row .val{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--blue);font-weight:700;
+    background:#f1f5ff;border-radius:6px;padding:1px 7px;white-space:nowrap}
+  .row input[type=range]{grid-column:1 / -1;width:100%;height:22px;margin:2px 0 0;accent-color:var(--blue);cursor:pointer}
+  .row.check{display:flex;align-items:center;gap:9px;margin:10px 0;cursor:pointer;
+    background:#f8fafd;border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .row.check input[type=checkbox]{width:17px;height:17px;margin:0;accent-color:var(--blue);cursor:pointer;flex:0 0 auto}
+  .row.check span{font-size:13px;color:#33405c}
+  .row.check:hover{background:#f2f6fd;border-color:#c3d2ea}
+
+  /* 读数 */
+  .readouts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ro{background:#f8fafd;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .ro .k{font-size:11px;color:var(--muted);letter-spacing:.3px}
+  .ro .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:#1f2a44}
+  .ro.wide{grid-column:1 / -1}
+  .regime{font-size:12.5px;font-weight:600;padding:9px 11px;border-radius:9px;background:#f8fafd;
+    border:1px solid var(--line);color:#33405c;grid-column:1 / -1}
+  .regime.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+
+  /* 公式 */
+  .eq{font-family:"Cambria Math","Latin Modern Math",Cambria,Georgia,"Times New Roman",serif;
+      font-size:19px;letter-spacing:.3px}
+  .eq .var{font-style:italic}
+  .eq .num{color:var(--blue);font-style:normal;font-weight:600}
+  .eq-main{font-size:22px;margin:2px 0 10px}
+  .eq-sub{font-size:14.5px;color:#3b4a68;margin:6px 0}
+  .eq-note{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .eq-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14.5px;margin-top:12px}
+  .eq-grid .lhs{color:var(--muted);white-space:nowrap}
+  .eq-grid .rhs{font-variant-numeric:tabular-nums}
+
+  .btns{display:flex;gap:8px;margin-top:6px}
+  button{font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:#26314c;transition:.15s}
+  button:hover{background:#f4f7fd;border-color:#c3d2ea}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+  button.primary:hover{background:#1d4ed8}
+
+  details.notes{margin-top:16px}
+  details.notes summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)}
+  details.notes .body{font-size:13px;color:#3b4a68}
+  details.notes ul{margin:8px 0 0;padding-left:20px}
+  details.notes li{margin:4px 0}
+  .mono{font-family:ui-monospace,Consolas,"Cascadia Mono",monospace;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>弹簧轮胎系统 · 地面不平激励下的竖向振动</h1>
+    <p>
+      <span class="pill in">内因</span> 弹簧刚度 k、阻尼 c、平板质量 m &nbsp;→&nbsp;
+      <span class="pill out">外因</span> 地面不平 u(t)（由幅值 A、波长 λ、不规则度、前进速度 v 决定）
+    </p>
+  </header>
+
+  <div class="grid">
+
+    <!-- 左：二维场景 -->
+    <div class="card">
+      <h2>二维场景 · 弹簧轮胎系统在起伏地面上前进</h2>
+      <canvas id="scene"></canvas>
+    </div>
+
+    <!-- 右：控制面板 -->
+    <div class="card">
+      <h2>参数控制</h2>
+      <div class="body" id="controls"></div>
+    </div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:minmax(0,1.55fr) minmax(300px,.85fr);margin-top:16px">
+
+    <!-- 左：时程曲线 -->
+    <div class="card">
+      <h2>时程曲线 · 地面激励 u(t) 与平板位移 y(t)</h2>
+      <canvas id="plot"></canvas>
+    </div>
+
+    <!-- 右：读数 -->
+    <div class="card">
+      <h2>实时读数</h2>
+      <div class="body">
+        <div class="readouts">
+          <div class="ro"><div class="k">固有频率 ωₙ</div><div class="v" id="rd-wn">—</div></div>
+          <div class="ro"><div class="k">阻尼比 ζ</div><div class="v" id="rd-zeta">—</div></div>
+          <div class="ro"><div class="k">激励频率 ω = 2πv/λ</div><div class="v" id="rd-omega">—</div></div>
+          <div class="ro"><div class="k">频率比 r = ω/ωₙ</div><div class="v" id="rd-r">—</div></div>
+          <div class="ro wide"><div class="k">位移传递率 |Y/A|</div><div class="v" id="rd-ta">—</div></div>
+          <div class="ro"><div class="k">平板位移 y</div><div class="v" id="rd-y">—</div></div>
+          <div class="ro"><div class="k">地面 u</div><div class="v" id="rd-u">—</div></div>
+          <div class="ro wide"><div class="k">弹簧相对压缩 y − u</div><div class="v" id="rd-rel">—</div></div>
+          <div class="regime" id="rd-regime">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 公式 -->
+  <div class="card" style="margin-top:16px">
+    <h2>微分方程 · 与互动参数一一对应</h2>
+    <div class="body">
+      <div class="eq eq-main">
+        <span class="var">m</span> <span class="var">ÿ</span> +
+        <span class="var">c</span> <span class="var">ẏ</span> +
+        <span class="var">k</span> <span class="var">y</span>
+        &nbsp;=&nbsp;
+        <span class="var">k</span> <span class="var">u</span>(<span class="var">t</span>) +
+        <span class="var">c</span> <span class="var">u̇</span>(<span class="var">t</span>)
+      </div>
+      <div class="eq eq-sub">
+        <span class="var">u</span>(<span class="var">t</span>) = <span class="var">h</span>(<span class="var">v t</span>)，&nbsp;
+        <span class="var">h</span>(<span class="var">x</span>) = <span class="var">A</span> ·
+        Σ<sub>i</sub> <span class="var">a</span><sub>i</sub> sin(2π<span class="var">x</span>/<span class="var">λ</span><sub>i</sub> + <span class="var">φ</span><sub>i</sub>) / Σ<sub>i</sub> <span class="var">a</span><sub>i</sub>
+      </div>
+
+      <div class="eq-note">代入当前参数（数值实时更新）：</div>
+      <div class="eq eq-sub" style="margin-top:2px">
+        <span class="num" id="eq-m">—</span>·<span class="var">ÿ</span> +
+        <span class="num" id="eq-c">—</span>·<span class="var">ẏ</span> +
+        <span class="num" id="eq-k">—</span>·<span class="var">y</span>
+        &nbsp;=&nbsp;
+        <span class="num" id="eq-k2">—</span>·<span class="var">u</span>(<span class="var">t</span>) +
+        <span class="num" id="eq-c2">—</span>·<span class="var">u̇</span>(<span class="var">t</span>)
+      </div>
+      <div class="eq eq-sub" style="color:#4a5a72">
+        <span id="eq-u">—</span>
+      </div>
+
+      <div class="eq-grid">
+        <div class="lhs">固有频率</div>
+        <div class="rhs">ωₙ = √(k/m) = <span id="eq-wn">—</span></div>
+        <div class="lhs">阻尼比</div>
+        <div class="rhs">ζ = c / (2√(km)) = <span id="eq-zeta">—</span></div>
+        <div class="lhs">激励频率</div>
+        <div class="rhs">ω = 2πv/λ = <span id="eq-omega">—</span></div>
+        <div class="lhs">位移传递率</div>
+        <div class="rhs">|Y/A| = √[ (1 + (2ζr)²) / ((1 − r²)² + (2ζr)²) ] = <span id="eq-ta">—</span></div>
+      </div>
+
+      <div class="eq-note">
+        说明：左端 <b>m ÿ + c ẏ + k y</b> 是系统的<b>内因</b>（惯性、阻尼、弹性）；
+        右端 <b>k u(t) + c u̇(t)</b> 是<b>外因</b>——地面不平的位移与速度。
+        外因必须乘以内因参数 k、c 才能进入方程，即“<b>外因通过内因起作用</b>”。
+        系统相当于把地面不平 u(t) 按传递率 |Y/A| 过滤后输出为 y(t)：r→1 时放大，r 较大时衰减（隔振）。
+      </div>
+    </div>
+  </div>
+
+  <details class="notes">
+    <summary>模型假设与符号说明</summary>
+    <div class="body card" style="border:none;box-shadow:none;padding:0;margin-top:8px">
+      <ul>
+        <li><b>自由度：</b>只研究平板竖向位移 <span class="mono">y(t)</span> 这一个状态（单自由度），轮胎视为与地面点接触的刚性滚动件。</li>
+        <li><b>线性：</b>弹簧力 <span class="mono">k(y−u)</span> 与阻尼力 <span class="mono">c(ẏ−u̇)</span> 均线性，位移为小量。</li>
+        <li><b>平衡点：</b>重力引起的静变形已被扣除，<span class="mono">y</span> 与 <span class="mono">u</span> 都以各自平衡位置为零点。</li>
+        <li><b>外因（地面）：</b>空间轮廓 <span class="mono">h(x)</span> 由主波长 λ 与若干谐波叠加，幅值为 A，不规则度控制谐波占比；车轮以速度 v 前进，故 <span class="mono">x = v t</span>，地面在时间上的激励频率 <span class="mono">ω = 2πv/λ</span>。</li>
+        <li><b>外因如何起作用：</b>地面不平不直接等于 y，而是通过 k、c、m 组成的系统被“过滤”。同一段路面，弹簧越软 / 阻尼越大 / 质量越大，平板受到的扰动越小。</li>
+        <li><b>视觉放慢倍率</b>只影响动画与时间轴的推进速度（相当于慢动作），不改变物理方程与各频率读数。</li>
+        <li><b>场景里的蓝线就是 y(t)：</b>从平板顶点向左伸出的蓝色<u>动态曲线</u>与下方时程曲线用的是<u>同一份采样数据和同一个 8 s 时间窗</u>，所以两条曲线的波形必然一致；场景里横轴是时间（向左为过去），曲线右端对准平板顶点，纵坐标就是 y 本身。可用控制面板「显示选项」中的开关把它关掉。蓝色<u>虚横线</u>标出当前时刻的水平高度，右端标签给出 y(t) 的实时数值，便于与地面、与 y=0 平衡位置直接对比。</li>
+      </ul>
+    </div>
+  </details>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     1. 参数定义
+     ============================================================ */
+  const PARAM_GROUPS = [
+    {
+      title: "内因 · 系统内部性质",
+      hint: "决定固有频率与阻尼",
+      items: [
+        { key: "m",      label: "平板质量 m",   unit: "kg",     min: 50,   max: 800,    step: 10,    def: 300  },
+        { key: "k",      label: "弹簧刚度 k",   unit: "N/m",    min: 5000, max: 150000, step: 1000,  def: 30000 },
+        { key: "c",      label: "阻尼系数 c",   unit: "N·s/m",  min: 0,    max: 8000,   step: 50,    def: 1500 }
+      ]
+    },
+    {
+      title: "外因 · 地面外部系统",
+      hint: "地面不平的空间形状",
+      items: [
+        { key: "A",      label: "地面不平幅值 A", unit: "m",  min: 0,   max: 0.30, step: 0.005, def: 0.08 },
+        { key: "lambda", label: "主波长 λ",       unit: "m",  min: 0.5, max: 8,    step: 0.1,   def: 2.0  },
+        { key: "rough",  label: "不规则度",       unit: "",   min: 0,   max: 1,    step: 0.02,  def: 0.45 }
+      ]
+    },
+    {
+      title: "耦合 · 前进与观察",
+      hint: "空间不平被“遇见”的时间频率",
+      items: [
+        { key: "v",    label: "前进速度 v",     unit: "m/s", min: 0.2, max: 8,   step: 0.1,  def: 2.0 },
+        { key: "slow", label: "视觉放慢倍率",   unit: "×",   min: 0.1, max: 1.5, step: 0.05, def: 0.5 }
+      ]
+    },
+    {
+      title: "显示选项",
+      hint: "可开关的场景元素",
+      items: [
+        { key: "showTrace", label: "显示 y(t) 动态曲线", type: "check", def: true }
+      ]
+    }
+  ];
+
+  const P = {};        // 当前参数值
+  const DEFAULTS = {}; // 默认值
+
+  /* ============================================================
+     2. 地面轮廓（外因）
+        h(x) = A · Σ a_i sin(k_i x + φ_i) / Σ a_i
+     ============================================================ */
+  let HARM = [];   // 缓存的谐波 {amp, k, ph}
+  let HSUM = 1;    // 幅值归一化系数
+
+  function rebuildHarmonics() {
+    const lam = P.lambda;
+    const rough = P.rough;
+    HARM = [
+      { amp: 1.00,       k: 2 * Math.PI / lam,          ph: 0.0 },
+      { amp: 0.55 * rough, k: 2 * Math.PI / (lam * 0.42), ph: 1.7 },
+      { amp: 0.32 * rough, k: 2 * Math.PI / (lam * 0.24), ph: 3.4 },
+      { amp: 0.20 * rough, k: 2 * Math.PI / (lam * 0.13), ph: 5.1 }
+    ];
+    HSUM = HARM.reduce(function (s, h) { return s + h.amp; }, 0) || 1;
+  }
+
+  function groundH(x) {
+    let s = 0;
+    for (let i = 0; i < HARM.length; i++) {
+      const h = HARM[i];
+      s += h.amp * Math.sin(h.k * x + h.ph);
+    }
+    return P.A * s / HSUM;
+  }
+
+  function groundHp(x) {  // dh/dx
+    let s = 0;
+    for (let i = 0; i < HARM.length; i++) {
+      const h = HARM[i];
+      s += h.amp * h.k * Math.cos(h.k * x + h.ph);
+    }
+    return P.A * s / HSUM;
+  }
+
+  /* 平板顶点（上表面）在 y = 0 时的高度，用于把 y 映射成场景中的屏幕高度。 */
+  function plateRestTopZ() {
+    return TIRE_R + SPRING_L + PLATE_H;
+  }
+
+  /* ============================================================
+     3. 运动方程
+        m y'' + c y' + k y = k u(t) + c u'(t)
+        其中 u(t) = h(v t)，u'(t) = v · h'(v t)
+     ============================================================ */
+  const state = { t: 0, x: 0, y: 0, ydot: 0 };
+  let samples = [];               // {t, y, u}
+  const WINDOW = 8;               // 时程窗口（秒），场景曲线与下方曲线共用
+  let paused = false;
+
+  function deriv(y, ydot, x) {
+    const u = groundH(x);
+    const udot = P.v * groundHp(x);
+    const yddot = (P.c * (udot - ydot) + P.k * (u - y)) / P.m;
+    return [ydot, yddot];
+  }
+
+  function rk4(dt) {
+    const x = state.x;
+    const v = P.v;
+    const y = state.y;
+    const yd = state.ydot;
+
+    const a1 = deriv(y, yd, x);
+    const a2 = deriv(y + 0.5 * dt * a1[0], yd + 0.5 * dt * a1[1], x + 0.5 * dt * v);
+    const a3 = deriv(y + 0.5 * dt * a2[0], yd + 0.5 * dt * a2[1], x + 0.5 * dt * v);
+    const a4 = deriv(y + dt * a3[0],        yd + dt * a3[1],        x + dt * v);
+
+    state.y    += dt / 6 * (a1[0] + 2 * a2[0] + 2 * a3[0] + a4[0]);
+    state.ydot += dt / 6 * (a1[1] + 2 * a2[1] + 2 * a3[1] + a4[1]);
+    state.x    += dt * v;
+    state.t    += dt;
+  }
+
+  function resetSim() {
+    state.t = 0;
+    state.x = 0;
+    state.y = groundH(0);
+    state.ydot = P.v * groundHp(0);   // 初始与地面同步，抑制初始瞬态
+    samples = [];
+  }
+
+  function recordSample() {
+    samples.push({ t: state.t, y: state.y, u: groundH(state.x) });
+    const cut = state.t - WINDOW - 1.5;
+    let drop = 0;
+    while (drop < samples.length && samples[drop].t < cut) drop++;
+    if (drop > 0) samples.splice(0, drop);
+  }
+
+  /* ============================================================
+     4. 画布工具
+     ============================================================ */
+  const sceneCanvas = document.getElementById("scene");
+  const sceneCtx = sceneCanvas.getContext("2d");
+  const plotCanvas = document.getElementById("plot");
+  const plotCtx = plotCanvas.getContext("2d");
+
+  function fitCanvas(canvas, ctx) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width));
+    const h = Math.max(1, Math.round(rect.height));
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { w: w, h: h };
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawSpring(ctx, x0, y0, x1, y1, coils, amp) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return;
+    const ux = dx / len, uy = dy / len;
+    const nx = -uy, ny = ux;
+    const lead = Math.min(len * 0.14, 16);
+    const body = Math.max(1, len - 2 * lead);
+    const segs = coils * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x0 + ux * lead, y0 + uy * lead);
+    for (let i = 0; i < segs; i++) {
+      const f = (i + 0.5) / segs;
+      const side = (i % 2 === 0) ? 1 : -1;
+      ctx.lineTo(
+        x0 + ux * (lead + body * f) + nx * amp * side,
+        y0 + uy * (lead + body * f) + ny * amp * side
+      );
+    }
+    ctx.lineTo(x0 + ux * (len - lead), y0 + uy * (len - lead));
+    ctx.lineTo(x1, y1);
+
+    /* 上下端面（弹簧座），让"这是弹簧"一眼可辨 */
+    const cap = amp * 0.85;
+    ctx.moveTo(x0 + nx * cap, y0 + ny * cap);
+    ctx.lineTo(x0 - nx * cap, y0 - ny * cap);
+    ctx.moveTo(x1 + nx * cap, y1 + ny * cap);
+    ctx.lineTo(x1 - nx * cap, y1 - ny * cap);
+
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    /* 两遍描边：浅色外圈 + 深色内芯，形成金属线圈的高对比外观 */
+    ctx.strokeStyle = "#b9c8dc";
+    ctx.lineWidth = 6.4;
+    ctx.stroke();
+    ctx.strokeStyle = "#2f3e52";
+    ctx.lineWidth = 3.2;
+    ctx.stroke();
+  }
+
+  /* ============================================================
+     5. 二维场景
+     ============================================================ */
+  const TIRE_R   = 0.12;   // 轮胎半径 (m)，相对小一些，让弹簧成为视觉主体
+  const SPRING_L = 0.44;   // 弹簧视觉原长 (m)，加长以便看清伸缩
+  const PLATE_W  = 0.44;   // 平板宽 (m)
+  const PLATE_H  = 0.075;  // 平板厚 (m)
+  const VISIBLE_M = 3.4;   // 视野水平宽度 (m)
+
+  function drawScene() {
+    const fit = fitCanvas(sceneCanvas, sceneCtx);
+    const ctx = sceneCtx;
+    const w = fit.w, h = fit.h;
+    ctx.clearRect(0, 0, w, h);
+
+    const ppm = w / VISIBLE_M;
+    const baseline = h - 50;
+    const xTire = state.x;
+    const sx = function (x) { return (x - xTire) * ppm + w * 0.30; };
+    const sy = function (z) { return baseline - z * ppm; };
+
+    /* 背景 */
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, "#eef4ff");
+    bg.addColorStop(1, "#fbfdff");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    /* 地面（外部系统） */
+    const xL = xTire - 0.30 * VISIBLE_M;
+    const xR = xTire + 0.70 * VISIBLE_M;
+    const steps = 280;
+
+    ctx.beginPath();
+    ctx.moveTo(sx(xL), h);
+    for (let i = 0; i <= steps; i++) {
+      const xx = xL + (xR - xL) * i / steps;
+      ctx.lineTo(sx(xx), sy(groundH(xx)));
+    }
+    ctx.lineTo(sx(xR), h);
+    ctx.closePath();
+    const gg = ctx.createLinearGradient(0, sy(0.2), 0, h);
+    gg.addColorStop(0, "#d8c6a6");
+    gg.addColorStop(1, "#9a825f");
+    ctx.fillStyle = gg;
+    ctx.fill();
+
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const xx = xL + (xR - xL) * i / steps;
+      const px = sx(xx), py = sy(groundH(xx));
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = "#6b5837";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    /* 关键几何量 */
+    const u = groundH(xTire);
+    const rel = state.y - u;                              // 相对压缩
+    const axleZ = u + TIRE_R;                             // 轮轴高度
+    const springLen = Math.max(0.07, Math.min(1.15, SPRING_L + rel));
+    const plateBottomZ = axleZ + springLen;               // 平板底面 = R + L0 + y
+    const plateTopZNow = plateBottomZ + PLATE_H;          // 平板顶点
+    const plateCx = sx(xTire);                            // 平板中心（屏幕 x）
+
+    /* ── y(t) 动态曲线 ──
+       用的是与下方时程曲线完全相同的一份采样数据（samples）和同一个时间窗
+       （WINDOW），所以两条曲线的波形必然一致；这里只是把横轴换成时间、
+       并把窗口右端对准平板顶点。纵坐标直接是 y 本身。 */
+    if (P.showTrace && samples.length > 1) {
+      const pps = plateCx / WINDOW;                       // 横轴比例：像素/秒
+      const traceBaseZ = plateRestTopZ();                 // y = 0 时平板顶点高度
+      const tOf = function (t) { return plateCx - (state.t - t) * pps; };
+      const zOf = function (yy) { return sy(traceBaseZ + yy); };
+
+      ctx.save();
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        const px = tOf(s.t);
+        if (px < -2) continue;
+        const py = zOf(s.y);
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      if (started) {
+        ctx.strokeStyle = "rgba(255,255,255,.82)";        // 柔光底衬，压在土色上也清晰
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      /* 横轴提示 */
+      ctx.save();
+      ctx.font = '600 11px "Segoe UI",sans-serif';
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(37,99,235,.9)";
+      ctx.fillText("← 过去 " + WINDOW.toFixed(0) + " s ｜ 与下方曲线同源同窗",
+        8, Math.min(h - 10, sy(plateTopZNow) + 18));
+      ctx.restore();
+    }
+
+    /* ── y(t) 水平指示线：穿过平板顶点，横贯整个场景 ── */
+    ctx.save();
+    ctx.setLineDash([8, 5]);
+    ctx.strokeStyle = "rgba(37,99,235,.5)";
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(0, sy(plateTopZNow));
+    ctx.lineTo(w, sy(plateTopZNow));
+    ctx.stroke();
+    ctx.restore();
+
+    /* 平衡位置参考线 */
+    ctx.save();
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sx(xTire) - 92, sy(TIRE_R + SPRING_L));
+    ctx.lineTo(sx(xTire) + 92, sy(TIRE_R + SPRING_L));
+    ctx.stroke();
+    ctx.restore();
+
+    /* 弹簧：加粗线圈 + 随视野缩放的横向幅度，作为视觉主体 */
+    const springAmp = Math.max(11, Math.min(17, ppm * 0.055));
+    drawSpring(ctx, sx(xTire), sy(axleZ), sx(xTire), sy(plateBottomZ), 11, springAmp);
+
+    /* 平板（质量） */
+    const pw = PLATE_W * ppm;
+    const phh = PLATE_H * ppm;
+    const pcx = plateCx;
+    const pcy = sy(plateBottomZ) - phh / 2;
+    ctx.fillStyle = "#2563eb";
+    roundRect(ctx, pcx - pw / 2, pcy - phh / 2, pw, phh, 7);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = '600 12.5px "Segoe UI",sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("平板 m", pcx, pcy + 0.5);
+
+    /* 平板顶点标记：动态曲线与水平指示线的交点就在这里 */
+    const topYpx = sy(plateTopZNow);
+    ctx.beginPath();
+    ctx.arc(pcx, topYpx, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#2563eb";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    /* 右端 y(t) 读数标签，与蓝色指示线同色同高 */
+    (function () {
+      const txt = "y(t) = " + (state.y * 100).toFixed(1) + " cm";
+      const ly = Math.max(18, Math.min(h - 18, topYpx));
+      ctx.font = '600 12.5px "Segoe UI",sans-serif';
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      const tw = ctx.measureText(txt).width;
+      const bx = w - 12 - tw - 14;
+      ctx.fillStyle = "rgba(255,255,255,.88)";
+      roundRect(ctx, bx, ly - 11, tw + 14, 22, 6);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(37,99,235,.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = "#2563eb";
+      ctx.fillText(txt, w - 19, ly + 0.5);
+    })();
+
+    /* 轮胎 */
+    const tx = sx(xTire), ty = sy(axleZ), tr = TIRE_R * ppm;
+    ctx.beginPath(); ctx.arc(tx, ty, tr, 0, Math.PI * 2);
+    ctx.fillStyle = "#334155"; ctx.fill();
+    ctx.beginPath(); ctx.arc(tx, ty, tr * 0.52, 0, Math.PI * 2);
+    ctx.fillStyle = "#cbd5e1"; ctx.fill();
+    ctx.beginPath(); ctx.arc(tx, ty, tr * 0.16, 0, Math.PI * 2);
+    ctx.fillStyle = "#64748b"; ctx.fill();
+    /* 轮辐标记，让滚动可见 */
+    /* 车轮向前（向右）滚动 = 顺时针；canvas 中正角度即顺时针，故取 +x/R */
+    const spin = xTire / TIRE_R;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(spin);
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const ang = i * Math.PI / 3;
+      ctx.lineTo(Math.cos(ang) * tr * 0.5, Math.sin(ang) * tr * 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    /* y(t) 位移标注：从平衡线到平板 */
+    const yTop = sy(TIRE_R + SPRING_L + state.y);
+    const yBot = sy(TIRE_R + SPRING_L);
+    const ax = sx(xTire) - 74;
+    ctx.strokeStyle = "#2563eb";
+    ctx.fillStyle = "#2563eb";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(ax, yBot); ctx.lineTo(ax, yTop); ctx.stroke();
+    arrow(ctx, ax, yTop, 0, -1);
+    arrow(ctx, ax, yBot, 0, 1);
+    ctx.fillStyle = "#2563eb";
+    ctx.font = 'italic 700 15px "Cambria Math",Georgia,serif';
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText("y(t)", ax - 8, (yTop + yBot) / 2);
+
+    /* 文字标签 */
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = '600 12px "Segoe UI",sans-serif';
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("弹簧", sx(xTire) + 16, (sy(axleZ) + sy(plateBottomZ)) / 2);
+    ctx.fillStyle = "#475569";
+    ctx.fillText("轮胎", tx + tr + 8, ty + 4);
+    ctx.fillStyle = "#7c6a4a";
+    ctx.fillText("地面（外部系统）", 16, h - 16);
+
+    /* 系统边界（虚线框） */
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "#93b4f7";
+    ctx.lineWidth = 1.4;
+    roundRect(ctx,
+      sx(xTire) - Math.max(pw, tr * 2) / 2 - 16,
+      sy(plateBottomZ) - phh - 14,
+      Math.max(pw, tr * 2) + 32,
+      (sy(axleZ - TIRE_R) + 14) - (sy(plateBottomZ) - phh - 14),
+      12);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = "#3b6fd4";
+    ctx.font = '600 11.5px "Segoe UI",sans-serif';
+    ctx.fillText("弹簧轮胎系统（内因）",
+      sx(xTire) - Math.max(pw, tr * 2) / 2 - 16, sy(plateBottomZ) - phh - 20);
+
+    /* 图例：说明场景里的蓝色线就是 y(t) */
+    (function () {
+      const bx = 14, by = 14, bw = 268, bh = 58;
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,.82)";
+      roundRect(ctx, bx, by, bw, bh, 9);
+      ctx.fill();
+      ctx.strokeStyle = "#dbe4f2";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.font = '600 11.5px "Segoe UI",sans-serif';
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+
+      /* 实线：动态曲线 y(t) */
+      ctx.strokeStyle = "#2563eb";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(bx + 12, by + 18);
+      ctx.lineTo(bx + 38, by + 18);
+      ctx.stroke();
+      ctx.fillStyle = "#33405c";
+      ctx.fillText("y(t) 动态曲线（与下方同源）", bx + 46, by + 18);
+
+      /* 虚线：水平指示线 */
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = "rgba(37,99,235,.75)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(bx + 12, by + 40);
+      ctx.lineTo(bx + 38, by + 40);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#33405c";
+      ctx.fillText("过顶点的 y(t) 水平线", bx + 46, by + 40);
+      ctx.restore();
+    })();
+  }
+
+  function arrow(ctx, x, y, dx, dy) {
+    // (dx, dy) 为单位方向，箭头尖端位于 (x, y)
+    const L = 7, W = 4.5;
+    const nx = -dy, ny = dx;   // 法向
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - dx * L + nx * W, y - dy * L + ny * W);
+    ctx.lineTo(x - dx * L - nx * W, y - dy * L - ny * W);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* ============================================================
+     6. 时程曲线
+     ============================================================ */
+  function niceCeil(v) {
+    if (!(v > 0)) return 1;
+    const exp = Math.floor(Math.log10(v));
+    const base = Math.pow(10, exp);
+    const m = v / base;
+    let n;
+    if (m <= 1) n = 1;
+    else if (m <= 2) n = 2;
+    else if (m <= 2.5) n = 2.5;
+    else if (m <= 5) n = 5;
+    else n = 10;
+    return n * base;
+  }
+
+  function drawPlot() {
+    const fit = fitCanvas(plotCanvas, plotCtx);
+    const ctx = plotCtx;
+    const w = fit.w, h = fit.h;
+    ctx.clearRect(0, 0, w, h);
+
+    const padL = 54, padR = 14, padT = 18, padB = 26;
+    const pw = Math.max(10, w - padL - padR);
+    const ph = Math.max(10, h - padT - padB);
+
+    const tEnd = Math.max(state.t, WINDOW);
+    const tStart = tEnd - WINDOW;
+
+    let maxAbs = 0.02;
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      if (s.t < tStart - 0.2) continue;
+      const a = Math.abs(s.y), b = Math.abs(s.u);
+      if (a > maxAbs) maxAbs = a;
+      if (b > maxAbs) maxAbs = b;
+    }
+    const scale = niceCeil(maxAbs * 1.15);
+
+    const xOf = function (t) { return padL + (t - tStart) / WINDOW * pw; };
+    const yOf = function (val) { return padT + ph / 2 - (val / scale) * (ph / 2); };
+
+    /* 背景 */
+    ctx.fillStyle = "#fcfdff";
+    ctx.fillRect(padL, padT, pw, ph);
+
+    /* 横向网格 + 纵轴刻度（cm） */
+    ctx.font = '11px "Segoe UI",sans-serif';
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const ticks = [1, 0.5, 0, -0.5, -1];
+    for (let i = 0; i < ticks.length; i++) {
+      const f = ticks[i];
+      const yy = yOf(f * scale);
+      ctx.strokeStyle = (f === 0) ? "#cbd5e1" : "#eef2f8";
+      ctx.lineWidth = (f === 0) ? 1.4 : 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, yy);
+      ctx.lineTo(padL + pw, yy);
+      ctx.stroke();
+      ctx.fillStyle = "#8a99b0";
+      const label = (f * scale * 100);
+      ctx.fillText(label.toFixed(Math.abs(label) < 10 ? 1 : 0), padL - 8, yy);
+    }
+
+    /* 纵向网格 + 时间刻度 */
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const tickStart = Math.ceil(tStart / 2) * 2;
+    for (let t = tickStart; t <= tEnd + 1e-6; t += 2) {
+      const xx = xOf(t);
+      ctx.strokeStyle = "#f1f5fb";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(xx, padT);
+      ctx.lineTo(xx, padT + ph);
+      ctx.stroke();
+      ctx.fillStyle = "#8a99b0";
+      ctx.fillText(t.toFixed(0) + "s", xx, padT + ph + 6);
+    }
+
+    /* 曲线 */
+    const drawSeries = function (key, color, width) {
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        if (s.t < tStart - 0.2) continue;
+        const px = xOf(s.t), py = yOf(s[key]);
+        if (!started) { ctx.moveTo(px, py); started = true; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
+    };
+    drawSeries("u", "#e0721a", 1.7);   // 外因
+    drawSeries("y", "#2563eb", 2.3);   // 响应
+
+    /* 图例 */
+    ctx.font = '12px "Segoe UI",sans-serif';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    let lx = padL + 10, ly = padT + 11;
+    ctx.fillStyle = "#e0721a";
+    ctx.fillRect(lx, ly - 1.5, 16, 3);
+    ctx.fillStyle = "#4a5a72";
+    ctx.fillText("地面激励 u(t)（外因）", lx + 22, ly);
+    lx += 168;
+    ctx.fillStyle = "#2563eb";
+    ctx.fillRect(lx, ly - 1.5, 16, 3);
+    ctx.fillStyle = "#4a5a72";
+    ctx.fillText("平板位移 y(t)（响应）", lx + 22, ly);
+
+    /* 轴单位 */
+    ctx.fillStyle = "#8a99b0";
+    ctx.font = '11px "Segoe UI",sans-serif';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText("位移 (cm)", padL - 46, padT - 16);
+  }
+
+  /* ============================================================
+     7. 读数与公式
+     ============================================================ */
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function updateReadouts() {
+    const wn = Math.sqrt(P.k / P.m);
+    const zeta = P.c / (2 * Math.sqrt(P.k * P.m));
+    const omega = 2 * Math.PI * P.v / P.lambda;
+    const r = omega / wn;
+    const num = 1 + Math.pow(2 * zeta * r, 2);
+    const den = Math.pow(1 - r * r, 2) + Math.pow(2 * zeta * r, 2);
+    const TA = Math.sqrt(num / den);
+
+    const u = groundH(state.x);
+
+    setText("rd-wn", wn.toFixed(2) + " rad/s (" + (wn / (2 * Math.PI)).toFixed(2) + " Hz)");
+    setText("rd-zeta", zeta.toFixed(3));
+    setText("rd-omega", omega.toFixed(2) + " rad/s");
+    setText("rd-r", r.toFixed(2));
+    setText("rd-ta", TA.toFixed(2) + (TA >= 1 ? "  ×放大" : "  ×衰减"));
+    setText("rd-y", (state.y * 100).toFixed(1) + " cm");
+    setText("rd-u", (u * 100).toFixed(1) + " cm");
+    setText("rd-rel", ((state.y - u) * 100).toFixed(1) + " cm");
+
+    let regime;
+    let warn = false;
+    if (Math.abs(r - 1) < 0.08) {
+      regime = "⚠ 接近共振：地面激励频率 ≈ 系统固有频率，平板位移被显著放大。";
+      warn = true;
+    } else if (TA > 1.02) {
+      regime = "低于共振区：地面不平被放大（隔振效果差）。";
+    } else if (TA < 0.98) {
+      regime = "高于共振区：地面不平被衰减（隔振效果好）。";
+    } else {
+      regime = "临界附近：传递率约等于 1。";
+    }
+    const regEl = document.getElementById("rd-regime");
+    if (regEl) {
+      regEl.textContent = regime;
+      regEl.className = "regime" + (warn ? " warn" : "");
+    }
+
+    /* 公式数值 */
+    setText("eq-m", P.m.toFixed(0));
+    setText("eq-c", P.c.toFixed(0));
+    setText("eq-k", P.k.toFixed(0));
+    setText("eq-k2", P.k.toFixed(0));
+    setText("eq-c2", P.c.toFixed(0));
+    setText("eq-u",
+      "u(t) = h(v t)，h(x) ≈ " + P.A.toFixed(3) +
+      "·sin(2π·x/" + P.lambda.toFixed(2) + ")" +
+      (P.rough > 0.02 ? " + 谐波项" : "") +
+      "，x = " + P.v.toFixed(2) + "·t（m）");
+    setText("eq-wn", wn.toFixed(2) + " rad/s");
+    setText("eq-zeta", zeta.toFixed(3));
+    setText("eq-omega", omega.toFixed(2) + " rad/s");
+    setText("eq-ta", TA.toFixed(2));
+  }
+
+  /* ============================================================
+     8. 控制面板构建
+     ============================================================ */
+  function buildControls() {
+    const host = document.getElementById("controls");
+    const frag = document.createDocumentFragment();
+
+    PARAM_GROUPS.forEach(function (group) {
+      const g = document.createElement("div");
+      g.className = "group";
+
+      const head = document.createElement("div");
+      head.className = "group-head";
+      head.innerHTML = "<b>" + group.title + "</b><span>" + group.hint + "</span>";
+      g.appendChild(head);
+
+      group.items.forEach(function (item) {
+        /* 复选框：用于可开关的显示项 */
+        if (item.type === "check") {
+          const row = document.createElement("label");
+          row.className = "row check";
+          row.setAttribute("for", "ck-" + item.key);
+
+          const box = document.createElement("input");
+          box.type = "checkbox";
+          box.id = "ck-" + item.key;
+          box.checked = !!item.def;
+
+          const span = document.createElement("span");
+          span.textContent = item.label;
+
+          P[item.key] = !!item.def;
+          DEFAULTS[item.key] = !!item.def;
+
+          box.addEventListener("change", function () {
+            P[item.key] = box.checked;
+          });
+
+          row.appendChild(box);
+          row.appendChild(span);
+          g.appendChild(row);
+          return;
+        }
+
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const label = document.createElement("label");
+        label.setAttribute("for", "sl-" + item.key);
+        label.textContent = item.label + (item.unit ? " (" + item.unit + ")" : "");
+
+        const val = document.createElement("div");
+        val.className = "val";
+        val.id = "val-" + item.key;
+
+        const input = document.createElement("input");
+        input.type = "range";
+        input.id = "sl-" + item.key;
+        input.min = String(item.min);
+        input.max = String(item.max);
+        input.step = String(item.step);
+        input.value = String(item.def);
+
+        row.appendChild(label);
+        row.appendChild(val);
+        row.appendChild(input);
+        g.appendChild(row);
+
+        /* 初始值 */
+        P[item.key] = item.def;
+        DEFAULTS[item.key] = item.def;
+
+        input.addEventListener("input", function () {
+          P[item.key] = parseFloat(input.value);
+          val.textContent = formatParam(item, P[item.key]);
+          if (item.key === "lambda" || item.key === "rough") rebuildHarmonics();
+          updateReadouts();
+        });
+
+        val.textContent = formatParam(item, item.def);
+      });
+
+      frag.appendChild(g);
+    });
+
+    /* 按钮 */
+    const btns = document.createElement("div");
+    btns.className = "btns";
+
+    const pauseBtn = document.createElement("button");
+    pauseBtn.className = "primary";
+    pauseBtn.textContent = "暂停";
+    pauseBtn.addEventListener("click", function () {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "继续" : "暂停";
+    });
+
+    const resetBtn = document.createElement("button");
+    resetBtn.textContent = "重置";
+    resetBtn.addEventListener("click", function () {
+      resetSim();
+    });
+
+    const defBtn = document.createElement("button");
+    defBtn.textContent = "恢复默认参数";
+    defBtn.addEventListener("click", function () {
+      PARAM_GROUPS.forEach(function (group) {
+        group.items.forEach(function (item) {
+          P[item.key] = DEFAULTS[item.key];
+          if (item.type === "check") {
+            const box = document.getElementById("ck-" + item.key);
+            if (box) box.checked = !!item.def;
+            return;
+          }
+          const input = document.getElementById("sl-" + item.key);
+          const val = document.getElementById("val-" + item.key);
+          if (input) input.value = String(item.def);
+          if (val) val.textContent = formatParam(item, item.def);
+        });
+      });
+      rebuildHarmonics();
+      resetSim();
+      updateReadouts();
+    });
+
+    btns.appendChild(pauseBtn);
+    btns.appendChild(resetBtn);
+    btns.appendChild(defBtn);
+    frag.appendChild(btns);
+
+    host.appendChild(frag);
+  }
+
+  function formatParam(item, value) {
+    let text;
+    if (item.step >= 1) text = value.toFixed(0);
+    else if (item.step >= 0.1) text = value.toFixed(1);
+    else if (item.step >= 0.01) text = value.toFixed(2);
+    else text = value.toFixed(3);
+    return text + (item.unit ? " " + item.unit : "");
+  }
+
+  /* ============================================================
+     9. 主循环
+     ============================================================ */
+  let last = performance.now();
+
+  function loop(now) {
+    const realDt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (!paused) {
+      const simDt = realDt * P.slow;
+      const hStep = 1 / 4000;
+      let n = Math.ceil(simDt / hStep);
+      if (n < 1) n = 1;
+      if (n > 12000) n = 12000;
+      const dt = simDt / n;
+      for (let i = 0; i < n; i++) rk4(dt);
+      recordSample();
+    }
+
+    drawScene();
+    drawPlot();
+    updateReadouts();
+    requestAnimationFrame(loop);
+  }
+
+  /* ============================================================
+     10. 启动
+     ============================================================ */
+  buildControls();
+  rebuildHarmonics();
+  resetSim();
+  updateReadouts();
+  requestAnimationFrame(loop);
+
+  window.addEventListener("resize", function () {
+    drawScene();
+    drawPlot();
+  });
+})();
+</script>
+</body>
+</html>

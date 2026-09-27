@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>汽车悬挂系统控制理论可视化实验平台</title>
+
+<!-- ==========================================================================
+     Plotly.js（CDN 引入）。
+     说明：外部脚本标签（script src）在 file:// 下不受跨源策略限制，
+     所以本文件可以直接双击打开；但 CDN 需要联网。
+
+     这里必须用 defer：Plotly.js 有数 MB，实测本机从 CDN 取回有时要十几秒。
+     若不加 defer，浏览器解析会停在这个标签上，整页（含离线提示）都出不来，
+     用户看到的是一片空白；加了 defer 之后解析继续，界面与参数读数立刻可见，
+     绘图库到位后再把三张图画上（defer 脚本保证在 DOMContentLoaded 之前执行完）。
+     ========================================================================== -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8" defer></script>
+
+<style>
+/* ======================= 主题变量（深色科技风） ======================= */
+:root{
+  --bg:#1e1e1e;          /* 页面背景（按需求指定） */
+  --card:#23272d;        /* 卡片背景 */
+  --card-2:#2a2f36;      /* 次级卡片 */
+  --line:#363c45;        /* 边框/分隔线 */
+  --fg:#ffffff;          /* 主文字（按需求指定） */
+  --fg-dim:#a9b2be;      /* 次级文字 */
+  --accent:#00adb5;      /* 强调色（按需求指定） */
+  --accent-soft:rgba(0,173,181,.16);
+  --warn:#ffb454;
+  --grid:#313741;        /* 图表网格线 */
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{background:var(--bg);}
+body{
+  background:var(--bg); color:var(--fg); padding:18px 20px 44px;
+  font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  font-size:14px; line-height:1.55;
+}
+
+/* ======================= 顶部标题栏 ======================= */
+header{margin-bottom:16px;}
+h1{font-size:19px; font-weight:600; letter-spacing:.3px;}
+h1 .badge{
+  display:inline-block; margin-left:8px; padding:2px 8px; border-radius:20px;
+  font-size:11px; font-weight:500; vertical-align:2px;
+  color:var(--accent); background:var(--accent-soft); border:1px solid rgba(0,173,181,.35);
+}
+.chain{
+  margin-top:8px; font-size:12.5px; color:var(--fg-dim);
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+}
+.chain b{color:var(--fg); font-weight:600;}
+.chain .tag{padding:1px 7px; border-radius:5px; background:var(--card-2); border:1px solid var(--line);}
+.chain .arw{color:var(--accent); font-weight:700;}
+
+/* ======================= 主体：左控制面板 + 右图区 ======================= */
+main{display:grid; grid-template-columns:326px minmax(0,1fr); gap:16px; align-items:start;}
+@media (max-width:900px){ main{grid-template-columns:1fr;} }
+
+#panel{
+  position:sticky; top:14px;
+  /* 面板比视口高时可自己滚动，避免内容被裁掉却看不见。
+     上限按 (视口高 − 130px) 取：面板尚在正常文档流中时（页首、还没触发 sticky），
+     它的顶部并不在 top:14px 而在页头之下，若仍按 100vh 留高，最下面一张卡片
+     会落到视口之外——首次打开就觉得"少了一块"。 */
+  max-height:calc(100vh - 130px); overflow-y:auto;
+  display:flex; flex-direction:column; gap:12px;
+}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 13px;
+}
+.card > h2{
+  font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase;
+  color:var(--accent); margin-bottom:9px;
+}
+
+/* ---------- 滑条 ---------- */
+.slider-row{margin-bottom:11px;}
+.slider-row:last-child{margin-bottom:2px;}
+.slider-head{display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; margin-bottom:5px;}
+.slider-head .name{color:var(--fg);}
+.slider-head .name em{font-style:normal; color:var(--fg-dim); font-size:11.5px;}
+.slider-head .val{font-family:Consolas,"Courier New",monospace; font-size:13px; color:var(--accent); font-weight:600;}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:3px;
+  background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,50%),#3d434c var(--fill,50%),#3d434c 100%);
+  outline:none; cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:15px; height:15px; border-radius:50%;
+  background:#0e1114; border:3px solid var(--accent); box-shadow:0 0 0 3px rgba(0,173,181,.15);
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px; border-radius:50%; background:#0e1114; border:3px solid var(--accent);
+}
+.range-scale{display:flex; justify-content:space-between; font-size:10.5px; color:#7c8592; margin-top:3px;}
+
+/* ---------- ω 滑条上的"固有频率标记" ----------
+   滑条外层要 position:relative，标记才能按百分比贴到轨道上（见 updateWnTick）。
+   标记左边缘用 calc 按"滑块中心的行程"定位：轨道两端各留半个滑块宽度，
+   否则在两端会与真实滑块位置差半个滑块宽（7.5px）。
+   line-height:0 是必须的：range 是 inline-block，外层若按 body 的 line-height:1.55
+   撑出行盒，外层高度会变成 ~21.7px 而不是轨道的 4px，top:50% 就会掉到轨道下方约 4px。 */
+.slider-wrap{position:relative; line-height:0;}
+.wn-tick{
+  position:absolute; top:50%; transform:translate(-50%,-50%);
+  width:18px; height:20px; padding:0; border:none; background:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.wn-tick .dot{
+  width:9px; height:9px; border-radius:2px; transform:rotate(45deg);
+  background:var(--warn); border:1px solid #14171b; box-shadow:0 0 0 2px rgba(255,180,84,.28);
+  transition:background .12s, box-shadow .12s;
+}
+.wn-tick:hover .dot, .wn-tick:focus-visible .dot{
+  background:#ffd08a; box-shadow:0 0 0 4px rgba(255,180,84,.4);
+}
+.wn-tick:focus{outline:none;}
+.tickmark{color:var(--warn); font-weight:600;}
+
+/* ---------- 下拉框 ---------- */
+select{
+  width:100%; padding:7px 9px; border-radius:7px; font-size:13px;
+  background:var(--card-2); color:var(--fg); border:1px solid var(--line); cursor:pointer;
+}
+select:focus{outline:1px solid var(--accent);}
+
+/* ---------- 派生参数与指标 ---------- */
+.stat{display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px dashed #31363f;}
+.stat:last-child{border-bottom:none;}
+.stat .k{font-size:12.5px; color:var(--fg-dim);}
+.stat .v{font-family:Consolas,"Courier New",monospace; font-size:14px; font-weight:600; color:var(--fg);}
+.stat .v.accent{color:var(--accent);}
+.stat .v.warn{color:var(--warn);}
+.sub{font-size:11px; color:#7c8592; font-weight:400; margin-left:4px;}
+#sysDesc{font-size:12.5px; color:var(--fg-dim); line-height:1.6; margin-top:8px;
+  padding-top:8px; border-top:1px dashed #31363f;}
+#sysDesc b{color:var(--accent);}
+
+/* ---------- 提示块 ---------- */
+.legend-note{font-size:11.5px; color:var(--fg-dim); line-height:1.7;}
+.legend-note .dot{display:inline-block; width:16px; height:0; border-top-width:2px; vertical-align:4px; margin-right:5px;}
+.legend-note .dot.dash{border-top-style:dashed; border-top-color:#8a94a6;}
+.legend-note .dot.solid{border-top-style:solid; border-top-color:var(--accent);}
+.legend-note code{font-family:Consolas,monospace; color:var(--accent); font-size:11.5px;}
+label.chk{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--fg-dim);
+  cursor:pointer; margin-top:9px;}
+label.chk input{accent-color:var(--accent); width:14px; height:14px; cursor:pointer;}
+button#reset{
+  margin-top:9px; width:100%; padding:7px; border-radius:7px; cursor:pointer; font-size:12.5px;
+  background:var(--card-2); color:var(--fg); border:1px solid var(--line);
+}
+button#reset:hover{border-color:var(--accent); color:var(--accent);}
+
+/* ======================= 右侧图表区 ======================= */
+#charts{display:flex; flex-direction:column; gap:14px; min-width:0;}
+.chart-card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 8px 2px;}
+/* 图表容器必须有确定高度，Plotly 才能算出画布尺寸；min-height:0 防止 flex 撑住不让缩 */
+.chart-box{height:330px; min-height:0; width:100%;}
+@media (max-height:760px){ .chart-box{height:290px;} }
+
+/* 离线提示 */
+#warn{
+  display:none; margin-bottom:14px; padding:10px 13px; border-radius:9px; font-size:12.5px;
+  background:rgba(255,180,84,.1); border:1px solid rgba(255,180,84,.4); color:var(--warn);
+}
+footer{margin-top:16px; font-size:11.5px; color:#7c8592; line-height:1.8;}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>汽车悬挂系统控制理论可视化实验平台<span class="badge">1/4 车被动悬挂</span></h1>
+  <div class="chain">
+    <span>外因（条件）<b class="tag">路面/车轮位移 x(t)</b></span>
+    <span class="arw">→</span>
+    <span>内因（根据）<b class="tag">m · k · c</b></span>
+    <span class="arw">→</span>
+    <span>输出（结果）<b class="tag">车身位移 y(t)</b></span>
+    <span class="arw">·</span>
+    <span>外因通过内因而起作用：同一条 x(t)，内因不同则 y(t) 完全不同</span>
+  </div>
+</header>
+
+<div id="warn" style="display:block">
+  ⏳ 正在加载绘图库 Plotly.js …（首次打开需联网，取回后自动出图；参数与指标不受影响）
+</div>
+
+<main>
+  <!-- ==================== 左侧控制面板 ==================== -->
+  <aside id="panel">
+
+    <!-- 外因：输入信号 -->
+    <section class="card">
+      <h2>外因 · 输入信号 x(t)</h2>
+      <select id="inputSel">
+        <option value="step" selected>阶跃输入 (Step)</option>
+        <option value="impulse">脉冲输入 (Impulse)</option>
+        <option value="sine">定频正弦 (Sine · ω/A 可调)</option>
+        <option value="chirp">正弦扫频 (Sine sweep)</option>
+      </select>
+      <div class="legend-note" style="margin-top:8px;">
+        阶跃与脉冲幅值取 1（单位阶跃 / 单位脉冲）。<br>
+        <b>定频正弦</b> x(t) = A·sin(ωt)：ω 与 A 可调，逐个正弦输入考察其对输出的影响。<br>
+        正弦扫频：0.5 → 60 rad/s 线性扫频，幅值 1。
+      </div>
+
+      <!-- 定频正弦的外因参数：仅在"定频正弦"模式下显示 -->
+      <div id="sineBox" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #31363f;">
+        <div class="slider-row">
+          <div class="slider-head">
+            <span class="name">激励频率 ω <em>(rad/s · 对数滑条)</em></span>
+            <span class="val" id="wVal">7.071</span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="wSlider" min="-1" max="2" step="0.0005" value="0.8495">
+            <!-- 固有频率标记：位置随 m/k/c 变化，点击把 ω 跳到该点 -->
+            <button type="button" id="wnTick" class="wn-tick" aria-label="跳到当前内因的固有频率 ωn">
+              <span class="dot"></span>
+            </button>
+          </div>
+          <div class="range-scale"><span>0.1</span><span>100</span></div>
+        </div>
+        <div class="slider-row">
+          <div class="slider-head">
+            <span class="name">激励幅值 A <em>(m)</em></span>
+            <span class="val" id="aVal">1.000</span>
+          </div>
+          <input type="range" id="aSlider" min="0.1" max="5" step="0.05" value="1">
+          <div class="range-scale"><span>0.1</span><span>5</span></div>
+        </div>
+        <div class="legend-note" style="margin-top:7px;">
+          滑条上的 <span class="tickmark">◆ 橙色菱形</span> = 当前内因的固有频率
+          ω<sub>n</sub> = √(k/m)，随 m / k / c 实时移动；<b>点击它</b>即可把 ω 直接跳到该点，
+          方便看共振处的输出。
+        </div>
+      </div>
+    </section>
+
+    <!-- 内因：三个参数 -->
+    <section class="card">
+      <h2>内因 · 系统参数</h2>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="name">质量 m <em>(kg)</em></span>
+          <span class="val" id="mVal">300</span>
+        </div>
+        <input type="range" id="mSlider" min="100" max="1000" step="10" value="300">
+        <div class="range-scale"><span>100</span><span>1000</span></div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="name">弹簧刚度 k <em>(N/m)</em></span>
+          <span class="val" id="kVal">15000</span>
+        </div>
+        <input type="range" id="kSlider" min="1000" max="50000" step="500" value="15000">
+        <div class="range-scale"><span>1000</span><span>50000</span></div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="name">阻尼系数 c <em>(Ns/m)</em></span>
+          <span class="val" id="cVal">1500</span>
+        </div>
+        <input type="range" id="cSlider" min="100" max="5000" step="50" value="1500">
+        <div class="range-scale"><span>100</span><span>5000</span></div>
+      </div>
+
+      <label class="chk">
+        <input type="checkbox" id="refToggle">
+        叠加默认内因参照曲线（虚线，m=300 / k=15000 / c=1500）
+      </label>
+      <button id="reset">恢复默认参数</button>
+    </section>
+
+    <!-- 派生内因参数 -->
+    <section class="card">
+      <h2>派生内因量</h2>
+      <div class="stat"><span class="k">固有频率 ω<sub>n</sub><span class="sub">= √(k/m)</span></span>
+        <span class="v accent" id="statWn">7.071<span class="sub">rad/s</span></span></div>
+      <div class="stat"><span class="k">阻尼比 ζ<span class="sub">= c/(2√(km))</span></span>
+        <span class="v accent" id="statZeta">0.354</span></div>
+      <div id="sysDesc"></div>
+    </section>
+
+    <!-- 性能指标 -->
+    <section class="card">
+      <h2>阶跃响应性能指标</h2>
+      <div class="stat"><span class="k">最大超调量 σ</span><span class="v" id="statOs">—</span></div>
+      <div class="stat"><span class="k">调节时间 t<sub>s</sub><span class="sub">2% 误差带</span></span><span class="v" id="statTs">—</span></div>
+      <div class="stat"><span class="k">稳态值 y<sub>∞</sub></span><span class="v" id="statYss">—</span></div>
+      <div class="legend-note" style="margin-top:9px;">
+        三项指标均按 <b>阶跃输入</b> 计算（控制理论的标准定义），与所选输入信号无关；
+        与所选输入相关的量体现在时域曲线与相平面上。
+      </div>
+    </section>
+
+    <!-- 定频正弦响应（仅"定频正弦"模式下显示） -->
+    <section class="card" id="sineCard" style="display:none">
+      <h2>定频正弦响应（外因 → 结果）</h2>
+      <div class="stat"><span class="k">激励频率 ω</span><span class="v accent" id="sineW">—</span></div>
+      <div class="stat"><span class="k">理论幅值比 |G(jω)|</span><span class="v" id="sineRatioT">—</span></div>
+      <div class="stat"><span class="k">实测幅值比（末周期）</span><span class="v" id="sineRatioM">—</span></div>
+      <div class="stat"><span class="k">相位滞后 φ</span><span class="v" id="sinePhi">—</span></div>
+      <div class="stat"><span class="k">输出稳态幅值</span><span class="v" id="sineAmp">—</span></div>
+      <div class="legend-note" style="margin-top:9px;">
+        理论值由 <code>|G(jω)| = |k + jωc| / |(k − mω²) + jωc|</code> 解析给出；
+        实测值从数值解的末周期峰谷差量取，除以输入幅值 A 得到。<br>
+        两者一致，即验证了同一个正弦外因经不同内因（m/k/c）得到不同输出的频域规律；
+        输入幅值 A 线性放大输出（线性系统），而 ω 改变的是<b>幅值比</b>本身。
+      </div>
+    </section>
+
+    <!-- 图例说明 -->
+    <section class="card">
+      <h2>读图说明</h2>
+      <div class="legend-note">
+        <span class="dot dash"></span>虚线：输入 x(t)——<b>外因</b><br>
+        <span class="dot solid"></span>实线：输出 y(t)——<b>结果</b><br>
+        <br>
+        ① 时域：拖滑条时曲线实时重绘，观察同一 x(t) 下 y(t) 的变化。
+        选"定频正弦"时图窗按周期自动展宽（3 个周期，5~60 s），可看清稳态的幅值与相位差。<br>
+        ② 频域：共振峰高度由 ζ 决定，ω<sub>n</sub> 决定峰的位置；
+        选"定频正弦"时曲线上以红圈标出当前工作点 ω。<br>
+        ③ 相平面：横轴取 <code>Δy = y − y∞</code>（偏离平衡的量），
+        故平衡点落在原点，轨迹螺旋收敛即为稳定。
+      </div>
+    </section>
+  </aside>
+
+  <!-- ==================== 右侧图表区 ==================== -->
+  <section id="charts">
+    <div class="chart-card"><div class="chart-box" id="chart1"></div></div>
+    <div class="chart-card"><div class="chart-box" id="chart2"></div></div>
+    <div class="chart-card"><div class="chart-box" id="chart3"></div></div>
+  </section>
+</main>
+
+<footer>
+  模型：1/4 汽车被动悬挂，m·y″ + c·y′ + k·y = c·x′ + k·x，G(s) = (c·s + k)/(m·s² + c·s + k)。<br>
+  数值求解：四阶龙格-库塔（时域初值已计入阶跃/脉冲在 t=0 处的跳变，由拉氏变换初值定理给出）。
+</footer>
+
+<script>
+/* ============================================================================
+   第一部分：核心数学（纯函数，不含任何 DOM 操作）
+   —— 这一段用标记围起，可被原样抽到 Node.js 中做数值验证（见交付说明）
+   ============================================================================ */
+/*==CORE-MATH-START==*/
+
+var UNIT_AMPLITUDE = 1;             // 单位阶跃 / 单位脉冲 / 单位幅值扫频
+var T_DISPLAY = 5;                  // 时域图窗长度 (s)
+var N_DISPLAY = 2000;               // 时域图窗采样点数
+var CHIRP = { w0: 0.5, w1: 60 };    // 正弦扫频：0.5 → 60 rad/s（线性扫频）
+var SINE_DEFAULT = { w: 7.071, A: 1 };   // 定频正弦默认工作点（ω 取默认内因的 ωn=√(k/m)）
+var SINE_WIN = { minT: T_DISPLAY, maxT: 60, periods: 3, ptsPerPeriod: 40 };  // 定频正弦时域图窗的自适应规则
+
+/* 由内因 (m, k, c) 派生出固有频率 ωn 与阻尼比 ζ
+   ωn = √(k/m)，ζ = c / (2√(km))；注意 c/m = 2ζωn、k/m = ωn²，
+   于是 G(s) = (2ζωn·s + ωn²)/(s² + 2ζωn·s + ωn²)。*/
+function deriveParams(m, k, c) {
+  var wn = Math.sqrt(k / m);
+  var zeta = c / (2 * Math.sqrt(k * m));
+  var wd = wn * Math.sqrt(Math.abs(1 - zeta * zeta));   // 有阻尼固有频率（ζ<1 时有物理意义）
+  return { wn: wn, zeta: zeta, wd: wd };
+}
+
+/* 外因信号 x(t) 及其导数 x'(t)：结果写入 out 对象，避免高频循环中反复分配内存。
+   参数 w 只对正弦类信号有意义（定频正弦的角频率）。
+   - step   : x = A（t>0），x' = 0；t=0 处的跳变由初值条件承担
+   - impulse: δ(t) 只在 t=0 有定义，t>0 时 u = u' = 0，跳变由初值条件承担
+   - sine   : 定频正弦 u = A·sin(ωt)，u' = A·ω·cos(ωt)
+   - chirp  : 线性扫频，瞬时角频率 w(t)=w0+(w1-w0)t/T，相位为其积分 */
+function inputInto(out, type, t, A, T, w) {
+  if (type === 'step')    { out.u = A; out.du = 0; return out; }
+  if (type === 'impulse') { out.u = 0; out.du = 0; return out; }
+  if (type === 'sine') {
+    out.u  =  A * Math.sin(w * t);
+    out.du =  A * w * Math.cos(w * t);
+    return out;
+  }
+  var w0 = CHIRP.w0, w1 = CHIRP.w1;
+  var wc = w0 + (w1 - w0) * t / T;
+  var phi = w0 * t + (w1 - w0) * t * t / (2 * T);
+  out.u  =  A * Math.sin(phi);
+  out.du =  A * wc * Math.cos(phi);
+  return out;
+}
+
+/* t = 0+ 的初值 [y(0+), y'(0+)]，由拉氏变换初值定理给出，已把 t=0 处的跳变计入。
+   对 G(s) = (b1·s + b0)/(s² + a1·s + a0)（此处 b1 = 2ζωn, b0 = ωn², a1 = 2ζωn, a0 = ωn²）：
+     阶跃：y(0+) = 0，      y'(0+) = cA/m = 2ζωn·A
+     脉冲：y(0+) = b1·A，   y'(0+) = (b0 − a1·b1)·A = ωn²(1 − 4ζ²)·A
+     正弦（定频/扫频）：从 0 平滑起步，y(0+) = y'(0+) = 0 */
+function initialConditions(p, type, A) {
+  if (type === 'step')    return [0, 2 * p.zeta * p.wn * A];
+  if (type === 'impulse') return [2 * p.zeta * p.wn * A, p.wn * p.wn * (1 - 4 * p.zeta * p.zeta) * A];
+  return [0, 0];
+}
+
+/* 四阶龙格-库塔积分。
+   状态 s = [y, y']，微分方程化为
+       y'  = v
+       v'  = −(k/m)·y − (c/m)·v + (k/m)·u(t) + (c/m)·u'(t)
+   返回 {t, x, y, v, p}（均为与 t 等长的定长数组）。
+   w 为定频正弦的角频率（type 非 'sine' 时可省）。 */
+function simulate(m, k, c, type, T, N, A, w) {
+  var p = deriveParams(m, k, c);
+  var km = k / m, cm = c / m;
+  var dt = T / (N - 1);
+  var ic = initialConditions(p, type, A);
+  var t = new Float64Array(N), x = new Float64Array(N);
+  var y = new Float64Array(N), v = new Float64Array(N);
+  var I1 = { u: 0, du: 0 }, I2 = { u: 0, du: 0 };
+
+  var s0 = ic[0], s1 = ic[1];
+  var h = dt / 2, i, tt, k1a, k1b, k2a, k2b, k3a, k3b, k4a, k4b;
+
+  for (i = 0; i < N; i++) {
+    tt = i * dt;
+    inputInto(I1, type, tt, A, T, w);
+    t[i] = tt; x[i] = I1.u; y[i] = s0; v[i] = s1;
+    if (i === N - 1) break;
+
+    // 第 1 段：k1 = f(s, t)
+    inputInto(I1, type, tt, A, T, w);
+    k1a = s1;
+    k1b = -km * s0 - cm * s1 + km * I1.u + cm * I1.du;
+
+    // 第 2 段：k2 = f(s + h·k1, t + h)
+    inputInto(I2, type, tt + h, A, T, w);
+    k2a = s1 + h * k1b;
+    k2b = -km * (s0 + h * k1a) - cm * (s1 + h * k1b) + km * I2.u + cm * I2.du;
+
+    // 第 3 段：k3 = f(s + h·k2, t + h)
+    inputInto(I2, type, tt + h, A, T, w);
+    k3a = s1 + h * k2b;
+    k3b = -km * (s0 + h * k2a) - cm * (s1 + h * k2b) + km * I2.u + cm * I2.du;
+
+    // 第 4 段：k4 = f(s + dt·k3, t + dt)
+    inputInto(I2, type, tt + dt, A, T, w);
+    k4a = s1 + dt * k3b;
+    k4b = -km * (s0 + dt * k3a) - cm * (s1 + dt * k3b) + km * I2.u + cm * I2.du;
+
+    s0 += dt / 6 * (k1a + 2 * k2a + 2 * k3a + k4a);
+    s1 += dt / 6 * (k1b + 2 * k2b + 2 * k3b + k4b);
+  }
+  return { t: t, x: x, y: y, v: v, p: p, dt: dt };
+}
+
+/* 阶跃响应性能指标。
+   注意：本系统分子带一个零点（s = −k/c），所以教科书上"无零点二阶系统"的
+   σ = e^(−πζ/√(1−ζ²)) 公式在这里不适用，超调量必须从实际响应曲线上量取。
+   计算窗口独立于 5 s 图窗（慢系统可能在图窗外才稳定），并给出 tsInWindow 标记。 */
+function stepMetrics(m, k, c, A) {
+  var p = deriveParams(m, k, c);
+  var zw = Math.max(p.zeta * p.wn, 1e-9);
+  var horizon = Math.min(Math.max(12, 12 / zw), 400);            // 计算窗口 (s)
+  var dtTarget = Math.min(0.002, 0.05 / Math.max(p.wn, 1e-9));   // 目标积分步长
+  var N = Math.min(Math.max(Math.ceil(horizon / dtTarget), 4000), 80000);
+  var r = simulate(m, k, c, 'step', horizon, N, A);
+
+  var yss = A, peak = -Infinity, peakTime = 0, i;
+  for (i = 0; i < N; i++) if (r.y[i] > peak) { peak = r.y[i]; peakTime = r.t[i]; }
+  var overshoot = peak > yss ? (peak - yss) / Math.abs(yss) * 100 : 0;
+
+  // 调节时间：最后一个落在 2% 误差带之外的时刻
+  var band = 0.02 * Math.abs(yss), ts = 0;
+  for (i = N - 1; i >= 0; i--) if (Math.abs(r.y[i] - yss) > band) { ts = r.t[i]; break; }
+
+  return {
+    wn: p.wn, zeta: p.zeta, wd: p.wd, yss: yss,
+    overshoot: overshoot, peak: peak, peakTime: peakTime,
+    ts: ts, horizon: horizon, dt: horizon / N,   // dt 一并给出：指标自身的量化误差即由此界定
+    tsInWindow: ts <= T_DISPLAY + 1e-9,     // 调节时间是否落在 5 s 图窗内
+    tsReliable: ts < horizon * 0.95         // 计算窗口内确实稳定下来了吗
+  };
+}
+
+/* 幅频特性 |G(jω)|，返回 dB。
+   G(jω) = (k + jωc) / ((k − mω²) + jωc) */
+function magnitudeDb(m, k, c, w) {
+  var num = Math.hypot(k, w * c);
+  var den = Math.hypot(k - m * w * w, w * c);
+  return 20 * Math.log10(num / den);
+}
+
+/* 对数等分频率网格 */
+function logGrid(wMin, wMax, N) {
+  var a = new Float64Array(N), lo = Math.log10(wMin), hi = Math.log10(wMax);
+  for (var i = 0; i < N; i++) a[i] = Math.pow(10, lo + (hi - lo) * i / (N - 1));
+  return a;
+}
+
+/* 幅频曲线的共振峰（在细密网格上取最大值，比解析求导稳健） */
+function resonancePeak(m, k, c) {
+  var grid = logGrid(0.1, 100, 1200), best = -Infinity, bestW = 0;
+  for (var i = 0; i < grid.length; i++) {
+    var dB = magnitudeDb(m, k, c, grid[i]);
+    if (dB > best) { best = dB; bestW = grid[i]; }
+  }
+  return { w: bestW, db: best };
+}
+
+/* 相平面轨迹（阶跃输入，偏差坐标）：
+   Δy = y − y∞，ġ 用 y' 本身，于是平衡点恰好落在原点 (0, 0)。 */
+function stepPhase(m, k, c, A) {
+  var r = simulate(m, k, c, 'step', T_DISPLAY, N_DISPLAY, A);
+  var dy = new Float64Array(N_DISPLAY);
+  for (var i = 0; i < N_DISPLAY; i++) dy[i] = r.y[i] - A;
+  return { t: r.t, dy: dy, v: r.v, y: r.y };
+}
+
+/* ---------- 定频正弦：外因 ω/A 可变，逐个正弦考察其对输出的影响 ---------- */
+
+/* 幅值比（无量纲），由 |G(jω)| = |k + jωc| / |(k − mω²) + jωc| 直接给出。
+   与 magnitudeDb 是同一条式子的两种写法，互为对照。 */
+function magnitudeRatio(m, k, c, w) {
+  return Math.hypot(k, w * c) / Math.hypot(k - m * w * w, w * c);
+}
+
+/* 相位滞后（度）：φ(ω) = arg(k + jωc) − arg((k − mω²) + jωc)。
+   分子零点使高频段相位回升，故 φ 从 0° 出发、在共振区最负、再回到 −90°，
+   结果归一到 (−180°, 180°]。负值表示输出滞后于输入。 */
+function phaseDeg(m, k, c, w) {
+  var wc = w * c;
+  var phi = Math.atan2(wc, k) - Math.atan2(wc, k - m * w * w);
+  while (phi <= -Math.PI) phi += 2 * Math.PI;
+  while (phi >  Math.PI) phi -= 2 * Math.PI;
+  return phi * 180 / Math.PI;
+}
+
+/* 定频正弦的时域图窗：至少 minT=5 s，至多 maxT=60 s，目标显示 periods=3 个周期，
+   并按 ptsPerPeriod 点/周期保证波形足够光滑（不低于 N_DISPLAY 点，防止瞬态段被画糙）。 */
+function sineWindow(w) {
+  var period = 2 * Math.PI / w;
+  var T = Math.min(Math.max(SINE_WIN.periods * period, SINE_WIN.minT), SINE_WIN.maxT);
+  var N = Math.min(Math.max(Math.ceil(SINE_WIN.ptsPerPeriod * T / period), N_DISPLAY), 20000);
+  return { period: period, T: T, N: N };
+}
+
+/* 定频正弦响应：一段足够长的积分，末周期已进入稳态，于其中量取输出幅值。
+   - 理论幅值比 ratioTheory = |G(jω)|（解析式，与积分无关）
+   - 实测幅值比 ratio       = 末周期 (max−min)/2 / A（从数值解量取）
+   两者若一致，即"同一正弦外因经不同内因得到不同输出"的频域证据。
+   stable 由末两周期幅值之差判定，避免把尚未稳态的读数当真。 */
+function sineResponse(m, k, c, A, w) {
+  var p = deriveParams(m, k, c);
+  var period = 2 * Math.PI / w;
+  var decay = Math.max(p.zeta * p.wn, 1e-9);              // 瞬态 e^(−ζωn·t) 的衰减率
+  var T = Math.min(Math.max(10 / decay, 4 * period), 600); // 跑够 + 覆盖至少 4 个周期
+  var dtMax = Math.min(period / 120, 0.02);                // 每周期至少 120 点
+  var N = Math.min(Math.max(Math.ceil(T / dtMax), 4000), 60000);
+  var r = simulate(m, k, c, 'sine', T, N, A, w);
+
+  var tLast = T - period, tPrev = T - 2 * period;
+  var hi = -Infinity, lo = Infinity, hi2 = -Infinity, lo2 = Infinity;
+  for (var i = 0; i < N; i++) {
+    var ti = r.t[i], yi = r.y[i];
+    if (ti >= tLast) { if (yi > hi) hi = yi; if (yi < lo) lo = yi; }
+    else if (ti >= tPrev) { if (yi > hi2) hi2 = yi; if (yi < lo2) lo2 = yi; }
+  }
+  var amp = (hi - lo) / 2;
+  var ampPrev = (hi2 > -Infinity && lo2 < Infinity) ? (hi2 - lo2) / 2 : amp;
+  var ratio = Math.abs(A) > 0 ? amp / Math.abs(A) : 0;
+  var ratioTheory = magnitudeRatio(m, k, c, w);
+
+  return {
+    w: w, A: A, period: period, T: T, horizon: T, dt: T / N,
+    amp: amp, ampPrev: ampPrev,
+    ratio: ratio, ratioTheory: ratioTheory,
+    ratioErr: ratioTheory > 0 ? Math.abs(ratio - ratioTheory) / ratioTheory : 0,
+    phaseDeg: phaseDeg(m, k, c, w),
+    stable: amp > 0 ? Math.abs(amp - ampPrev) / amp < 0.02 : false
+  };
+}
+
+/*==CORE-MATH-END==*/
+
+
+/* ============================================================================
+   第二部分：页面装配与渲染（DOM / Plotly 相关，不属于核心数学）
+   ============================================================================ */
+
+/* ---------- 常量与状态 ---------- */
+var DEFAULT_PARAMS = { m: 300, k: 15000, c: 1500 };   // 默认内因
+var REF_PARAMS     = { m: 300, k: 15000, c: 1500 };   // 参照曲线的内因（固定不变）
+
+var state = { m: 300, k: 15000, c: 1500, input: 'step', ref: false,
+              w: SINE_DEFAULT.w, amp: SINE_DEFAULT.A };
+
+var PLOT_CONFIG = {
+  responsive: true,
+  displaylogo: false,
+  modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines']
+};
+
+/* 统一坐标轴样式 */
+function ax(titleText) {
+  return {
+    title: { text: titleText, font: { color: '#e8eaed', size: 12 } },
+    gridcolor: '#313741', zerolinecolor: '#4a515c', linecolor: '#4a515c',
+    tickfont: { color: '#c9d1d9', size: 11 }, automargin: true
+  };
+}
+var LAYOUT_BASE = {
+  paper_bgcolor: '#23272d', plot_bgcolor: '#23272d',
+  font: { color: '#e8eaed', family: '"Segoe UI","Microsoft YaHei",sans-serif', size: 11 },
+  margin: { l: 62, r: 18, t: 46, b: 46 },
+  showlegend: true,
+  legend: { orientation: 'h', x: 0, y: 1.14, bgcolor: 'rgba(0,0,0,0)', font: { size: 11 } },
+  title: { font: { color: '#ffffff', size: 12.5 } }
+};
+
+/* ---------- DOM 引用 ---------- */
+var el = {};
+['mSlider', 'kSlider', 'cSlider', 'mVal', 'kVal', 'cVal', 'inputSel', 'refToggle',
+ 'reset', 'statWn', 'statZeta', 'statOs', 'statTs', 'statYss', 'sysDesc',
+ 'sineBox', 'sineCard', 'wSlider', 'aSlider', 'wVal', 'aVal', 'wnTick',
+ 'sineW', 'sineRatioT', 'sineRatioM', 'sinePhi', 'sineAmp',
+ 'chart1', 'chart2', 'chart3', 'warn'].forEach(function (id) { el[id] = document.getElementById(id); });
+
+/* ---------- 工具函数 ---------- */
+function fmt(x, n) { return (Math.abs(x) < 1e-12 ? 0 : x).toFixed(n); }
+function toArr(typed) { return Array.prototype.slice.call(typed); }
+
+/* 滑条填充比例（让已选区间着色） */
+function paintSlider(slider) {
+  var pct = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+  slider.style.setProperty('--fill', pct + '%');
+}
+
+/* ω 滑条上"固有频率标记"的位置。
+   ω 滑条的值本身就是 log10(ω)，min/max 即 log10(0.1) 与 log10(100)，
+   所以固有频率 ωn 在对数刻度上的相对位置就是下面的 x（0~1）。
+   返回归一化位置，与具体像素无关，便于单独验证。 */
+function wnTickX(m, k, c) {
+  var wn = deriveParams(m, k, c).wn;
+  var lo = parseFloat(el.wSlider.min), hi = parseFloat(el.wSlider.max);
+  var x = (Math.log10(wn) - lo) / (hi - lo);
+  return Math.min(1, Math.max(0, x));   // m/k/c 的取值范围内 ωn 始终落在 [1, 22.4]，钳位只是保险
+}
+
+/* 把标记摆到滑条上（滑条外层 .slider-wrap 是 position:relative）。
+   轨道两端各留半个滑块宽度 RANGE_THUMB/2，使标记与滑块中心严格对齐。 */
+var RANGE_THUMB = 15;                   // 与 CSS 中 input[type=range] 滑块宽度一致
+function updateWnTick() {
+  var wn = deriveParams(state.m, state.k, state.c).wn;
+  var x = wnTickX(state.m, state.k, state.c);
+  el.wnTick.style.left = 'calc(' + (RANGE_THUMB / 2) + 'px + (100% - ' + RANGE_THUMB + 'px) * ' + x + ')';
+  el.wnTick.title = '当前内因的固有频率 ωn = ' + fmt(wn, 3) + ' rad/s（随 m/k/c 变化）——点击把激励频率 ω 跳到该点';
+}
+
+/* 从界面读回内因与外因（唯一的状态入口） */
+function readUI() {
+  state.m = parseFloat(el.mSlider.value);
+  state.k = parseFloat(el.kSlider.value);
+  state.c = parseFloat(el.cSlider.value);
+  state.input = el.inputSel.value;
+  state.ref = el.refToggle.checked;
+  // 定频正弦的外因：频率滑条走的是 log10(ω)（0.1 → 100 rad/s 在对数刻度上均匀）
+  state.w = Math.pow(10, parseFloat(el.wSlider.value));
+  state.amp = parseFloat(el.aSlider.value);
+  var isSine = state.input === 'sine';
+  el.mVal.textContent = state.m;
+  el.kVal.textContent = state.k;
+  el.cVal.textContent = state.c;
+  el.wVal.textContent = fmt(state.w, 3);
+  el.aVal.textContent = fmt(state.amp, 3);
+  el.sineBox.style.display = isSine ? 'block' : 'none';
+  el.sineCard.style.display = isSine ? 'block' : 'none';
+  paintSlider(el.mSlider); paintSlider(el.kSlider); paintSlider(el.cSlider);
+  paintSlider(el.wSlider); paintSlider(el.aSlider);
+  updateWnTick();          // 内因一变，滑条上的固有频率标记就要跟着挪
+}
+
+/* ---------- 指标缓存（参数不变时不必重算长时间窗） ---------- */
+var metricsCache = { key: '', val: null };
+function metricsFor(m, k, c) {
+  var key = m + '|' + k + '|' + c;
+  if (metricsCache.key !== key) {
+    metricsCache = { key: key, val: stepMetrics(m, k, c, UNIT_AMPLITUDE) };
+  }
+  return metricsCache.val;
+}
+
+/* ---------- 定频正弦响应缓存（拖滑条时避免同一组参数重复长时间积分） ---------- */
+var sineCache = { key: '', val: null };
+function sineFor(m, k, c, A, w) {
+  var key = m + '|' + k + '|' + c + '|' + A + '|' + w;
+  if (sineCache.key !== key) {
+    sineCache = { key: key, val: sineResponse(m, k, c, A, w) };
+  }
+  return sineCache.val;
+}
+
+/* ---------- 组装三个图表的数据与布局 ---------- */
+function buildModel() {
+  var m = state.m, k = state.k, c = state.c, p = deriveParams(m, k, c);
+  var met = metricsFor(m, k, c);
+
+  var isSine = state.input === 'sine';
+  var A = isSine ? state.amp : UNIT_AMPLITUDE;    // 外因幅值：定频正弦可调，其余取单位幅值
+  var win = isSine ? sineWindow(state.w) : { period: 0, T: T_DISPLAY, N: N_DISPLAY };
+  var sr = isSine ? sineFor(m, k, c, A, state.w) : null;
+
+  /* ---- 图 1：时域响应 ---- */
+  var r = simulate(m, k, c, state.input, win.T, win.N, A, state.w);
+  var ymax = 0, i;
+  for (i = 0; i < r.y.length; i++) ymax = Math.max(ymax, Math.abs(r.y[i]));
+
+  var xTrace, extraAnno = [];
+  if (state.input === 'impulse') {
+    // δ(t) 无法直接画成曲线，用一条窄三角脉冲示意，并在标注中说明
+    var hgt = Math.max(ymax * 1.15, 1e-6);
+    xTrace = {
+      x: [0, 0.045, 0.09], y: [0, hgt, 0], name: 'x(t) = δ(t)（示意脉冲）',
+      mode: 'lines', line: { color: '#8a94a6', width: 2, dash: 'dash' }, hoverinfo: 'skip'
+    };
+    extraAnno.push({
+      x: 0.09, y: hgt, xref: 'x', yref: 'y', text: 'δ(t)', showarrow: false,
+      font: { color: '#8a94a6', size: 11 }, xanchor: 'left', yanchor: 'middle'
+    });
+  } else {
+    var xName = state.input === 'step' ? 'x(t) 阶跃输入'
+              : (state.input === 'sine' ? 'x(t) = A·sin(ωt)（外因，A=' + fmt(A, 2) + '）'
+                                        : 'x(t) 扫频输入');
+    xTrace = {
+      x: toArr(r.t), y: toArr(r.x), name: xName,
+      mode: 'lines', line: { color: '#8a94a6', width: 2, dash: 'dash' }
+    };
+  }
+
+  var d1 = [xTrace, {
+    x: toArr(r.t), y: toArr(r.y), name: 'y(t) 车身位移（当前内因）',
+    mode: 'lines', line: { color: '#00adb5', width: 2.6 }
+  }];
+  if (state.ref) {
+    var rr = simulate(REF_PARAMS.m, REF_PARAMS.k, REF_PARAMS.c, state.input, win.T, win.N, A, state.w);
+    d1.push({
+      x: toArr(rr.t), y: toArr(rr.y), name: 'y(t) 参照内因（默认 m/k/c）',
+      mode: 'lines', line: { color: '#5d6673', width: 1.5, dash: 'dot' }
+    });
+  }
+
+  // 参考线：阶跃给出稳态值 y∞；定频正弦给出稳态幅值 ±|G(jω)|·A
+  var shapes1, anno1;
+  if (isSine) {
+    var ampOut = sr.ratioTheory * Math.abs(A);
+    shapes1 = [
+      { type: 'line', x0: 0, x1: win.T, y0:  ampOut, y1:  ampOut,
+        line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } },
+      { type: 'line', x0: 0, x1: win.T, y0: -ampOut, y1: -ampOut,
+        line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } }
+    ];
+    anno1 = extraAnno.concat([{
+      x: win.T, y: ampOut, xref: 'x', yref: 'y', xanchor: 'right', yanchor: 'bottom',
+      text: '稳态幅值 ±|G(jω)|·A = ' + fmt(ampOut, 3) + ' m', showarrow: false,
+      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }
+    }]);
+  } else {
+    shapes1 = [{ type: 'line', x0: 0, x1: win.T, y0: met.yss, y1: met.yss,
+                 line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } }];
+    anno1 = extraAnno.concat([{
+      x: win.T, y: met.yss, xref: 'x', yref: 'y', xanchor: 'right', yanchor: 'bottom',
+      text: '阶跃稳态 y∞ = ' + fmt(met.yss, 2) + ' m', showarrow: false,
+      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }
+    }]);
+  }
+
+  var l1 = Object.assign({}, LAYOUT_BASE, {
+    title: { text: '① 时域响应：输入 x(t) 与输出 y(t)' + (isSine ? '（定频正弦，图窗 ' + fmt(win.T, 1) + ' s ≈ 3 个周期）' : ''),
+            font: { color: '#ffffff', size: 12.5 } },
+    xaxis: ax('t  (s)'),
+    yaxis: ax('位移  (m)'),
+    hovermode: 'x unified',
+    shapes: shapes1,
+    annotations: anno1
+  });
+
+  /* ---- 图 2：幅频特性 ---- */
+  var wg = logGrid(0.1, 100, 320);
+  var dbArr = new Array(wg.length);
+  for (i = 0; i < wg.length; i++) dbArr[i] = magnitudeDb(m, k, c, wg[i]);
+  var pk = resonancePeak(m, k, c);
+
+  var d2 = [{
+    x: toArr(wg), y: dbArr, name: '|Y(jω)/X(jω)|',
+    mode: 'lines', line: { color: '#00adb5', width: 2.6 }
+  }];
+  var shapes2 = [{ type: 'line', x0: p.wn, x1: p.wn, y0: 0, y1: 1, yref: 'paper',
+                   line: { color: 'rgba(255,180,84,.55)', width: 1, dash: 'dot' } }];
+  var anno2 = [{
+    x: p.wn, y: 1, xref: 'x', yref: 'paper', xanchor: 'left', yanchor: 'top',
+    text: ' ωn = ' + fmt(p.wn, 3), showarrow: false, font: { color: '#ffb454', size: 10.5 }
+  }, {
+    x: pk.w, y: pk.db, xref: 'x', yref: 'y', xanchor: 'center', yanchor: 'bottom',
+    text: '共振峰 ' + fmt(pk.db, 2) + ' dB @ ' + fmt(pk.w, 2) + ' rad/s',
+    showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1,
+    font: { color: '#ffb454', size: 10.5 }, ax: 0, ay: -26
+  }];
+  if (isSine) {
+    // 当前工作点：横坐标 ω、纵坐标 |G(jω)|，与时域图的稳态幅值互相印证
+    var dbNow = magnitudeDb(m, k, c, state.w);
+    d2.push({
+      x: [state.w], y: [dbNow], name: '当前正弦工作点 ω', mode: 'markers+text',
+      marker: { color: '#ff5252', size: 12, symbol: 'circle-open', line: { width: 2.5 } },
+      text: ['ω = ' + fmt(state.w, 3)], textposition: 'top right',
+      textfont: { color: '#ff5252', size: 10.5 }
+    });
+    shapes2.push({ type: 'line', x0: state.w, x1: state.w, y0: 0, y1: 1, yref: 'paper',
+                   line: { color: 'rgba(255,82,82,.5)', width: 1, dash: 'dot' } });
+  }
+  var l2 = Object.assign({}, LAYOUT_BASE, {
+    title: { text: '② 频域响应：幅频特性（Bode 幅值图）', font: { color: '#ffffff', size: 12.5 } },
+    xaxis: Object.assign(ax('ω  (rad/s)'), { type: 'log', range: [Math.log10(0.1), Math.log10(100)] }),
+    yaxis: ax('幅值比  (dB)'),
+    shapes: shapes2,
+    annotations: anno2
+  });
+
+  /* ---- 图 3：相平面（阶跃输入，偏差坐标） ---- */
+  var ph = stepPhase(m, k, c, UNIT_AMPLITUDE);
+  var n = ph.dy.length;
+  var d3 = [
+    { x: toArr(ph.dy), y: toArr(ph.v), name: '相轨迹 (Δy, ẏ)',
+      mode: 'lines', line: { color: '#00adb5', width: 2.2 } },
+    { x: [ph.dy[0]], y: [ph.v[0]], name: '起点 (t = 0⁺)',
+      mode: 'markers', marker: { color: '#ffb454', size: 9, line: { color: '#1e1e1e', width: 1 } } },
+    { x: [0], y: [0], name: '平衡点（原点）',
+      mode: 'markers', marker: { color: '#ff5252', size: 10, symbol: 'x' } }
+  ];
+  var l3 = Object.assign({}, LAYOUT_BASE, {
+    title: { text: '③ 相平面：位移—速度轨迹（阶跃响应，向平衡点收敛）', font: { color: '#ffffff', size: 12.5 } },
+    xaxis: ax('Δy = y − y∞  (m)'),
+    yaxis: ax('ẏ  (m/s)'),
+    annotations: [{
+      x: ph.dy[Math.min(2, n - 1)], y: ph.v[Math.min(2, n - 1)],
+      ax: ph.dy[0], ay: ph.v[0], xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
+      showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1.2, text: ''
+    }, {
+      x: 0, y: 0, xref: 'x', yref: 'y', xanchor: 'left', yanchor: 'bottom',
+      text: ' 平衡点 (0, 0)', showarrow: false, font: { color: '#ff5252', size: 10.5 }
+    }]
+  });
+
+  return { d1: d1, l1: l1, d2: d2, l2: l2, d3: d3, l3: l3,
+           met: met, p: p, res: r, sine: sr, win: win, amp: A, isSine: isSine };
+}
+
+/* ---------- 系统性质描述（把参数翻译成人话） ---------- */
+function describeSystem(p, met) {
+  var z = p.zeta, s;
+  if (z < 0.02) {
+    s = '<b>ζ ≈ 0</b>：几乎无阻尼，等幅振荡、能量无法耗散——外因一旦激起，响应永不衰减。';
+  } else if (z < 1) {
+    s = '<b>ζ = ' + fmt(z, 3) + ' &lt; 1</b>：欠阻尼。ζ 越小 → 超调越大、振荡越久、共振峰越高。';
+  } else if (z < 1.001) {
+    s = '<b>ζ ≈ 1</b>：临界阻尼，无超调条件下最快的响应。';
+  } else {
+    s = '<b>ζ = ' + fmt(z, 3) + ' &gt; 1</b>：过阻尼。无超调，但两点实极点中慢极点主导，响应迟缓。';
+  }
+  if (!met.tsReliable) {
+    s += '<br>响应过慢，调节时间已超出本页计算窗口（' + fmt(met.horizon, 0) + ' s），该读数不可信。';
+  } else if (!met.tsInWindow) {
+    s += '<br>调节时间超出 5 s 图窗——它在图外才稳定，见指标区读数。';
+  }
+  return s;
+}
+
+/* ---------- 刷新左侧读数 ---------- */
+function updateReadouts(md) {
+  var p = md.p, met = md.met;
+  el.statWn.innerHTML = fmt(p.wn, 3) + '<span class="sub">rad/s</span>';
+  el.statZeta.textContent = fmt(p.zeta, 3);
+  el.statOs.innerHTML = fmt(met.overshoot, 2) + '<span class="sub">%</span>';
+  el.statTs.className = 'v' + (met.tsInWindow && met.tsReliable ? '' : ' warn');
+  el.statTs.innerHTML = fmt(met.ts, 3) + '<span class="sub">s' +
+    (met.tsInWindow && met.tsReliable ? '（图窗内）' : '（超出 5 s 图窗）') + '</span>';
+  el.statYss.innerHTML = fmt(met.yss, 3) + '<span class="sub">m</span>';
+  el.sysDesc.innerHTML = describeSystem(p, met);
+
+  /* 定频正弦读数：理论值（解析式）与实测值（末周期量取）并列，一眼可比 */
+  if (md.sine) {
+    var s = md.sine;
+    var pct = s.ratioTheory > 0 ? Math.abs(s.ratio - s.ratioTheory) / s.ratioTheory * 100 : 0;
+    el.sineW.innerHTML = fmt(s.w, 3) + '<span class="sub">rad/s · T=' + fmt(s.period, 3) + ' s</span>';
+    el.sineRatioT.innerHTML = fmt(s.ratioTheory, 4) +
+      '<span class="sub">= ' + fmt(20 * Math.log10(s.ratioTheory), 2) + ' dB</span>';
+    el.sineRatioM.innerHTML = fmt(s.ratio, 4) +
+      '<span class="sub">偏差 ' + fmt(pct, 2) + '%' + (s.stable ? '' : ' · 未稳态') + '</span>';
+    el.sinePhi.innerHTML = fmt(s.phaseDeg, 2) + '<span class="sub">°（输出滞后于输入）</span>';
+    el.sineAmp.innerHTML = fmt(s.amp, 4) + '<span class="sub">m（输入 A=' + fmt(s.A, 2) + ' m）</span>';
+  }
+}
+
+/* ---------- 渲染（唯一一处把模型送到屏幕上的地方） ---------- */
+var renderCount = 0;      // 「到底有没有重绘」必须是一个可读的数
+var pendingFrame = false;
+
+function renderAll() {
+  var md = buildModel();
+  updateReadouts(md);
+  if (window.Plotly) {
+    // 用 Plotly.react（差分更新）而不是 newPlot（整图重建）：滑条高频拖动时才不会卡
+    Plotly.react(el.chart1, md.d1, md.l1, PLOT_CONFIG);
+    Plotly.react(el.chart2, md.d2, md.l2, PLOT_CONFIG);
+    Plotly.react(el.chart3, md.d3, md.l3, PLOT_CONFIG);
+    renderCount++;   // 只统计"真正把图送到屏幕上"的次数；离线时始终为 0，如实反映没画出图
+  }
+  return md;
+}
+
+/* 滑条输入 → 用 rAF 合并同一帧内的多次输入（拖动时每帧最多重绘一次） */
+function scheduleRender() {
+  if (pendingFrame) return;
+  pendingFrame = true;
+  requestAnimationFrame(function () { pendingFrame = false; renderAll(); });
+}
+
+function onInput() { readUI(); scheduleRender(); }
+
+/* ---------- 事件绑定 ---------- */
+['mSlider', 'kSlider', 'cSlider', 'wSlider', 'aSlider'].forEach(function (id) {
+  el[id].addEventListener('input', onInput);
+});
+el.inputSel.addEventListener('change', onInput);
+el.refToggle.addEventListener('change', onInput);
+
+/* 点击滑条上的固有频率标记 → 把 ω 直接跳到当前内因的 ωn（对数刻度上取 log10(ωn)）。
+   跳到"固有频率点"（而不是共振峰 ωn√(1−2ζ²)），因为题面要的是内因自带的 ωn。 */
+el.wnTick.addEventListener('click', function () {
+  var wn = deriveParams(state.m, state.k, state.c).wn;
+  var lo = parseFloat(el.wSlider.min), hi = parseFloat(el.wSlider.max);
+  el.wSlider.value = String(Math.min(hi, Math.max(lo, Math.log10(wn))));
+  onInput();
+});
+
+el.reset.addEventListener('click', function () {
+  el.mSlider.value = DEFAULT_PARAMS.m;
+  el.kSlider.value = DEFAULT_PARAMS.k;
+  el.cSlider.value = DEFAULT_PARAMS.c;
+  onInput();
+});
+
+/* 窗口尺寸变化时让 Plotly 重算画布（响应式布局） */
+var resizeTimer = null;
+window.addEventListener('resize', function () {
+  if (!window.Plotly) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function () {
+    ['chart1', 'chart2', 'chart3'].forEach(function (id) { Plotly.Plots.resize(el[id]); });
+  }, 120);
+});
+
+/* ---------- 启动 ---------- */
+/* 第一步：先算不依赖绘图库的部分。参数、派生量、指标与读数都只用到核心数学，
+   与 Plotly 无关，所以立刻先跑一遍——绘图库还没到位时界面也已经有数据。 */
+readUI();
+renderAll();                   // 此时 window.Plotly 还不存在，renderAll 内部会跳过绘图
+
+/* 第二步：绘图库到位（或明确加载失败）后补画三张图。
+   Plotly 用 defer 加载，defer 脚本保证在 DOMContentLoaded 之前执行完毕，
+   因此在这个时点判断 window.Plotly 是可靠的；若脚本已被解析（例如本段被移走），
+   则直接执行。 */
+function boot() {
+  if (!window.Plotly) {
+    // 离线/被拦截：把"正在加载"换成明确的失败提示（读数仍可用）
+    el.warn.textContent = '⚠ 未能加载 Plotly.js（需要联网访问 CDN）。左侧参数、派生量与性能指标仍可正常计算，'
+                        + '但三张图表无法绘制。请联网后刷新页面。';
+  } else {
+    el.warn.style.display = 'none';
+  }
+  readUI();
+  renderAll();                 // 有 Plotly 时这一遍才真正画出三张图
+  window.__suspReady = true;   // 显式就绪信号：供自动化验收等待
+}
+
+/* 对外暴露内部接口（供 Node / 浏览器内的自动化验收直接调用同步入口） */
+window.__susp = {
+  state: state,
+  deriveParams: deriveParams,
+  simulate: simulate,
+  stepMetrics: stepMetrics,
+  magnitudeDb: magnitudeDb,
+  magnitudeRatio: magnitudeRatio,
+  phaseDeg: phaseDeg,
+  logGrid: logGrid,
+  resonancePeak: resonancePeak,
+  stepPhase: stepPhase,
+  sineWindow: sineWindow,
+  sineResponse: sineResponse,
+  buildModel: buildModel,
+  renderAll: renderAll,
+  readUI: readUI,
+  wnTickX: wnTickX,
+  updateWnTick: updateWnTick,
+  getRenderCount: function () { return renderCount; },
+  constants: { T_DISPLAY: T_DISPLAY, N_DISPLAY: N_DISPLAY, CHIRP: CHIRP, UNIT_AMPLITUDE: UNIT_AMPLITUDE,
+               SINE_DEFAULT: SINE_DEFAULT, SINE_WIN: SINE_WIN,
+               DEFAULT_PARAMS: DEFAULT_PARAMS, REF_PARAMS: REF_PARAMS }
+};
+
+/* 注册启动：放在 __susp 暴露之后，保证 boot 同步执行时接口也已就位 */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
