@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>相空间可视化计算器 · 汽车悬挂系统可视化项目</title>
+<link rel="stylesheet" href="../../assets/theme.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-shell="app">
+<div id="fatal"></div>
+
+<header id="topbar" class="sitebar">
+  <a class="brand" href="../../index.html" title="回到导航页">汽车悬挂系统</a>
+  <span class="crumb">VIEW 04 · <b>相空间可视化计算器</b></span>
+  <span class="spacer"></span>
+  <div class="dims" id="dimTabs">
+    <button data-dim="1">一维相空间</button>
+    <button data-dim="2">二维相空间</button>
+    <button data-dim="3">三维相空间</button>
+  </div>
+
+  <div class="dims modes">
+    <button id="modeDet" class="active" title="外因确定：一个状态点只有一条轨迹">确定性</button>
+    <button id="modeRandom" title="外因随机：同一个状态点重复演化，看它停留的概率分布">随机外因</button>
+  </div>
+
+  <label class="sel">
+    <span>预设系统</span>
+    <select id="presetSelect"></select>
+  </label>
+  <div class="dimnote" id="dimNote"></div>
+</header>
+
+<main>
+  <!-- ------------------------------------------------ 左：方程 -->
+  <aside id="left">
+    <h2>写微分方程 <span class="hint">照学生的写法：dθ/dt = ω</span></h2>
+
+    <!-- 书写工具：分组符号盘 + 模板。目的是"用鼠标就能把一个方程写完整" -->
+    <div class="palette">
+      <div class="palgroup">
+        <span class="pallabel">导数</span>
+        <button class="sym" data-ins="d/dt " title="对时间求导（可写 dθ/dt 或 d/dt θ）">d/dt</button>
+        <button class="sym" data-ins="'" title="撇号写法（等价于 d/dt）">&#39;</button>
+        <span class="palhint">三种写法都认：<code>dθ/dt</code>、<code>d/dt θ</code>、<code>θ'</code></span>
+      </div>
+      <div class="palgroup">
+        <span class="pallabel">希腊字母</span>
+        <button class="sym" data-ins="θ">θ</button>
+        <button class="sym" data-ins="ω">ω</button>
+        <button class="sym" data-ins="μ">μ</button>
+        <button class="sym" data-ins="ζ">ζ</button>
+        <button class="sym" data-ins="α">α</button>
+        <button class="sym" data-ins="β">β</button>
+        <button class="sym" data-ins="γ">γ</button>
+        <button class="sym" data-ins="δ">δ</button>
+        <button class="sym" data-ins="λ">λ</button>
+        <button class="sym" data-ins="σ">σ</button>
+        <button class="sym" data-ins="ρ">ρ</button>
+        <button class="sym" data-ins="φ">φ</button>
+        <button class="sym" data-ins="Ω">Ω</button>
+      </div>
+      <div class="palgroup">
+        <span class="pallabel">函数</span>
+        <button class="sym" data-ins="sin(">sin</button>
+        <button class="sym" data-ins="cos(">cos</button>
+        <button class="sym" data-ins="tan(">tan</button>
+        <button class="sym" data-ins="asin(">asin</button>
+        <button class="sym" data-ins="atan(">atan</button>
+        <button class="sym" data-ins="sinh(">sinh</button>
+        <button class="sym" data-ins="cosh(">cosh</button>
+        <button class="sym" data-ins="exp(">exp</button>
+        <button class="sym" data-ins="ln(">ln</button>
+        <button class="sym" data-ins="log(">log</button>
+        <button class="sym" data-ins="abs(">abs</button>
+        <button class="sym" data-ins="sqrt(">√</button>
+        <button class="sym" data-ins="sign(">sign</button>
+        <button class="sym" data-ins="mod(">mod</button>
+      </div>
+      <div class="palgroup">
+        <span class="pallabel">运算</span>
+        <button class="sym" data-ins="+">+</button>
+        <button class="sym" data-ins="-">−</button>
+        <button class="sym" data-ins="*">·</button>
+        <button class="sym" data-ins="/">/</button>
+        <button class="sym" data-ins="(">(</button>
+        <button class="sym" data-ins=")">)</button>
+        <button class="sym" data-ins="^2">²</button>
+        <button class="sym" data-ins="^3">³</button>
+        <button class="sym" data-ins="^">^</button>
+        <button class="sym" data-ins="pi" title="圆周率">π</button>
+        <button class="sym" data-ins="t" title="自变量（用了它就不是自治系统）">t</button>
+      </div>
+      <div class="palgroup">
+        <span class="pallabel">随机外因</span>
+        <button class="sym" data-ins="road(t)" title="路面位移（随机过程的一次实现）">road(t)</button>
+        <button class="sym" data-ins="roadV(t)" title="路面速度">roadV(t)</button>
+        <button class="sym" data-ins="xi(t)" title="一般随机输入">xi(t)</button>
+        <span class="palhint">写进方程后切到「随机外因」模式</span>
+      </div>
+      <div class="palgroup">
+        <span class="pallabel">整段模板</span>
+        <select id="tplSelect" class="tpl">
+          <option value="">插入一个方程组骨架…</option>
+          <option value="decay">一维指数衰减</option>
+          <option value="logistic">逻辑斯谛增长</option>
+          <option value="cusp">双稳态（三个不动点）</option>
+          <option value="osc">简谐振子（中心）</option>
+          <option value="pendulum">单摆</option>
+          <option value="damped">阻尼单摆（焦点）</option>
+          <option value="vdp">范德波尔（极限环）</option>
+          <option value="lv">捕食—被捕食</option>
+          <option value="susp">随机路面下的悬挂（随机模式）</option>
+          <option value="lorenz">洛伦兹吸引子（三维）</option>
+        </select>
+        <span class="palhint"><code>#</code> 开头是注释；不写 <code>d/dt</code> 的行是已知量</span>
+      </div>
+    </div>
+
+    <textarea id="editor" spellcheck="false" autocomplete="off"
+      placeholder="# 每行一个式子：&#10;g = 9.8            ← 不带 d/dt 的行是已知量（参数）&#10;dθ/dt = ω          ← 带 d/dt 的行是微分方程&#10;dω/dt = -(g/L)·sin(θ)&#10;&#10;# 几个状态变量，就是几维相空间"></textarea>
+    <div id="errors" class="errors"></div>
+    <div class="btnrow">
+      <button id="applyBtn" class="primary" title="Ctrl+Enter">应用方程</button>
+      <button id="btnFit">适配视野</button>
+      <button id="btnResetView">重置视野</button>
+    </div>
+
+    <!-- 方程预览：把刚写的方程排版成学生手写的样子（放在左栏里，不再浮在图上挡图） -->
+    <div class="eqpreview">
+      <div class="eqhead"><span class="eqtitle">方程预览</span>
+        <span class="palhint">点号写法 + 等价二阶形式（自动判断）</span>
+      </div>
+      <div id="insetEq"></div>
+    </div>
+
+    <!-- 随机外因模式的控制面板（只在随机模式下显示） -->
+    <div id="mcPanel" class="mcpanel">
+      <h2>随机外因 <span class="hint">外因不是一条确定的曲线，而是一族</span></h2>
+      <div class="prow"><label>谱形</label>
+        <select id="randKind" class="wide">
+          <option value="band" selected>带限白噪声</option>
+          <option value="kanai">Kanai–Tajimi 路面谱</option>
+          <option value="white">宽带白噪声</option>
+        </select>
+      </div>
+      <div class="prow"><label>强度 S₀</label>
+        <input type="range" id="randIntensity" min="0.001" max="0.2" step="0.001" value="0.02">
+        <span class="val" id="randIntensityVal">0.02</span>
+      </div>
+      <div class="prow"><label>频带</label>
+        <input type="range" id="randWMin" min="0.1" max="10" step="0.1" value="0.5">
+        <input type="range" id="randWMax" min="2" max="60" step="1" value="20">
+      </div>
+      <div class="prow"><label></label><span class="val" id="randBandVal">0.5–20</span><span class="hint">rad/s</span></div>
+      <div class="prow"><label>谐波数</label>
+        <input type="range" id="randComponents" min="8" max="200" step="8" value="64">
+        <span class="val" id="randCompVal">64</span>
+      </div>
+      <div class="prow"><label>重复次数</label>
+        <input type="range" id="mcRuns" min="10" max="400" step="10" value="100">
+        <span class="val" id="mcRunsVal">100</span>
+      </div>
+      <div class="prow"><label>每次时长</label>
+        <input type="range" id="mcTMax" min="5" max="60" step="5" value="20">
+        <span class="val" id="mcTMaxVal">20</span>
+      </div>
+      <div class="prow"><label>随机种子</label>
+        <input type="number" id="mcSeed" value="20260923">
+        <button id="btnMcSeed" class="ghost" title="换一个种子并重跑">换一批</button>
+      </div>
+      <div class="btnrow">
+        <button id="btnMC" class="primary">开始模拟（N 次）</button>
+      </div>
+      <label class="mini chk"><input type="checkbox" id="mcPathsOnly">只画路径（不画概率云）</label>
+      <div id="mcNote" class="mcnote">在相空间里标一个点，然后点“开始模拟”：这个点会在随机外因下重复走 N 次。</div>
+    </div>
+
+    <h2>参数 <span class="hint">拖动即改向量场</span></h2>
+    <div id="params" class="params"></div>
+
+    <h2>初始状态（相空间中的那个点）</h2>
+    <div id="initBox" class="params"></div>
+
+    <!-- 三维相流工具（只在三维模式下出现：二维视图里它没有意义） -->
+    <div id="flow3dPanel" class="mcpanel">
+      <h2>三维相流工具 <span class="hint">框一团状态，看它被拉成什么形状</span></h2>
+      <div class="prow"><label>半宽</label>
+        <input type="range" id="flow3dHF" min="0.03" max="0.6" step="0.01" value="0.18">
+        <span class="val" id="flow3dHFVal">18%</span>
+      </div>
+      <div class="prow"><label>每轴点数</label>
+        <input type="range" id="flow3dN" min="3" max="6" step="1" value="4">
+        <span class="val" id="flow3dNVal">4³ = 64</span>
+      </div>
+      <label class="mini chk"><input type="checkbox" id="flow3dCenter" checked>以当前状态为中心</label>
+      <div class="btnrow">
+        <button id="btn3DFlow">建立三维相流云</button>
+        <button id="btn3DClear" class="ghost">清除</button>
+      </div>
+    </div>
+
+    <h2>怎么用</h2>
+    <ul class="help">
+      <li><b>单击图</b>：在这个位置放置一个状态点（它随即带着这个状态演化）</li>
+      <li><b>拖出矩形</b>：框选一片状态区域 —— 里面每个点都是一条轨迹（相流）</li>
+      <li><b>Shift+拖动</b>（或中键拖动）：平移视野 —— 三个维度都一样管用</li>
+      <li><b>滚轮</b>：以光标为中心缩放（一维相线也支持）&nbsp;·&nbsp; <b>双击</b>：重置视野</li>
+      <li><b>三维</b>：直接拖动旋转、滚轮缩放、单击在与当前状态等深的平面上放点；
+        左侧「三维相流工具」可以框一团状态，看它被相流拉成什么形状</li>
+      <li><b>方程写法</b>：<code>dθ/dt = ω</code>、<code>d/dt θ = ω</code>、<code>θ̇ = ω</code> 都认；
+        乘号写 <code>*</code> 或 <code>·</code> 都行；以 <code>#</code> 开头的行是注释</li>
+      <li><b>随机外因</b>：把 <code>road(t)</code>（路面位移）、<code>roadV(t)</code>（路面速度）、
+        <code>xi(t)</code> 写进方程，切到「随机外因」模式，就能重复跑 N 次看概率分布与频谱</li>
+    </ul>
+  </aside>
+
+  <!-- ------------------------------------------------ 中：相空间 -->
+  <section id="center">
+    <div id="playbar">
+      <button id="btnPlayF" class="primary">▶ 正向演化 (t↑)</button>
+      <button id="btnPlayB">◀ 反向回溯 (t↓)</button>
+      <button id="btnStepF" title="前进一个采样步">▸|</button>
+      <button id="btnStepB" title="后退一个采样步">|◂</button>
+      <button id="btnStop">⟲ 回到初值</button>
+      <label class="mini">速度 <input type="range" id="speed" min="0.05" max="4" step="0.05" value="1"><span id="speedVal">1.00×</span></label>
+      <label class="mini">步长 <select id="dtSel">
+        <option value="0.05">0.05</option>
+        <option value="0.02">0.02</option>
+        <option value="0.01" selected>0.01</option>
+        <option value="0.005">0.005</option>
+        <option value="0.002">0.002</option>
+      </select></label>
+      <label class="mini">方法 <select id="methodSel">
+        <option value="rk4" selected>RK4</option>
+        <option value="heun">Heun</option>
+        <option value="euler">Euler</option>
+      </select></label>
+      <label class="mini">时长 <input type="range" id="horizon" min="2" max="60" step="1" value="20"><span id="horizonVal">20</span></label>
+      <label class="mini chk"><input type="checkbox" id="tgField" checked>向量场</label>
+      <label class="mini chk"><input type="checkbox" id="tgNull">零倾线</label>
+      <label class="mini chk"><input type="checkbox" id="tgEq" checked>不动点</label>
+      <label class="mini chk"><input type="checkbox" id="tgGrid" checked>网格</label>
+      <label class="mini chk"><input type="checkbox" id="tgTrail" checked>轨迹</label>
+      <label class="mini chk"><input type="checkbox" id="tgBack" checked>回溯支</label>
+      <label class="mini chk"><input type="checkbox" id="tgFlow" checked>相流</label>
+      <label class="mini chk"><input type="checkbox" id="tgLabels" checked>标注</label>
+    </div>
+
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <div id="inset">
+        <canvas id="schematic"></canvas>
+      </div>
+      <canvas id="legend"></canvas>
+    </div>
+
+    <div id="bottomPlots">
+      <div id="seriesWrap">
+        <div class="seriesTitle">状态分量随时间 t 的变化 <span class="hint">同一个点，在时间轴上的样子（负半轴是回溯支）</span></div>
+        <canvas id="series"></canvas>
+      </div>
+      <div id="psdWrap">
+        <div class="seriesTitle">功率谱密度 <span class="hint">细线 = 输入谱，粗线 = 响应谱</span></div>
+        <canvas id="psd"></canvas>
+      </div>
+    </div>
+
+    <div id="flowbar">
+      <span class="hint">相流：</span><span id="flowNote">在图上拖出一个矩形，里面的每一个点都是一个可能的初始状态</span>
+      <button id="btnSeed3D" class="ghost">以当前状态撒一簇（三维相流）</button>
+      <button id="btnClearFlow" class="ghost">清除相流</button>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------ 右：读数与结构 -->
+  <aside id="right">
+    <h2>此刻的状态</h2>
+    <div id="readout" class="readout"></div>
+
+    <h2>系统的结构 <span class="hint">与"某一条轨迹"无关</span></h2>
+    <div id="structure" class="structure"></div>
+    <div class="btnrow"><button id="btnAnalyze">深度分析（极限环 / Lyapunov）</button></div>
+    <div id="dynamics" class="readout"></div>
+
+    <h2>这个系统的读法</h2>
+    <div id="note" class="note"></div>
+
+    <h2>相空间的三个层次</h2>
+    <div class="legendText">
+      <p><b>点</b>＝系统的一个状态；<b>坐标轴</b>＝描述这个状态所需的属性。一个属性够用就是一维相空间；两个属性就是二维相平面。</p>
+      <p><b>箭头</b>＝微分方程在该点的取值 f(x)：即"处于这个状态时，系统下一刻往哪儿变、变多快"。箭头颜色编码 |f|，青绿慢、橙红快。</p>
+      <p><b>相流</b>＝所有可能初始状态一起演化后的样子。看一个区域如何被拉伸、压缩、卷曲，比看一条轨迹更能说明系统的性质。</p>
+      <p><b>散度 ∇·f</b>＝相体积的瞬时变化率：负值收缩（耗散）、零守恒（如无阻尼振子）、正值膨胀。这是刘维尔定理在具体系统上的样子。</p>
+      <p><b>不动点与极限环</b>＝系统的"终态结构"。它们由方程决定，不由你的初始状态决定——初始状态只决定你最终落进哪一个。</p>
+    </div>
+  </aside>
+</main>
+
+<script src="src/expr.js"></script>
+<script src="src/core.js"></script>
+<script src="src/random.js"></script>
+<script src="src/presets.js"></script>
+<script src="src/render.js"></script>
+<script src="src/app.js"></script>
+<script>
+  // 只在被要求时加载自检脚本：正常使用时它是零成本
+  if (/selftest/.test(location.search)) {
+    var s = document.createElement('script');
+    s.src = 'tests/browser-selftest.js';
+    document.body.appendChild(s);
+  }
+</script>
+</body>
+</html>

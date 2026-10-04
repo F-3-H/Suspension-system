@@ -1,0 +1,23 @@
+# 本地静态服务器的请求日志（每次验收都会写）
+tools/server.log
+modules/*/tools/server.log
+
+# 验收过程产生的截图（要留证据就放到对应项目的 docs/ 里）
+tools/shot-*.png
+tools/*-zoom.png
+
+# 子代理/临时备份
+tools/_before-*.html
+tools/*.before.html
+
+# 反向对照用的"故障版"副本（由 tools/make-buggy-*.cjs 现场生成）
+tools/app-buggy-*.js
+modules/*/tools/app-buggy-*.js
+
+# 依赖与编辑器
+node_modules/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

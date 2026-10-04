@@ -4,179 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>汽车悬挂系统 · 综合可视化项目</title>
+<link rel="stylesheet" href="assets/theme.css">
 <style>
-  :root{
-    --bg:#1e1e1e;
-    --panel:#252526;
-    --panel-hover:#2d2d30;
-    --border:#3a3a3d;
-    --text:#ffffff;
-    --text-dim:#a0a0a8;
-    --accent:#00adb5;
-    --accent-soft:rgba(0,173,181,.12);
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:"Segoe UI","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
-    line-height:1.6;
-    min-height:100vh;
-    padding:56px 24px 80px;
-  }
-  .wrap{max-width:1120px;margin:0 auto;}
-
-  header{margin-bottom:48px;}
-  .eyebrow{
-    display:inline-block;
-    font-size:13px;
-    letter-spacing:.18em;
-    color:var(--accent);
-    border:1px solid var(--accent);
-    border-radius:999px;
-    padding:4px 14px;
-    margin-bottom:20px;
-  }
-  h1{
-    font-size:clamp(28px,4vw,44px);
-    font-weight:600;
-    letter-spacing:.02em;
-    margin-bottom:14px;
-  }
-  .lede{
-    color:var(--text-dim);
-    font-size:16px;
-    max-width:760px;
-  }
-  .lede strong{color:var(--text);font-weight:600;}
-
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-    gap:22px;
-  }
-
-  a.card{
-    display:block;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:26px 24px 24px;
-    text-decoration:none;
-    color:inherit;
-    transition:transform .18s ease,border-color .18s ease,background .18s ease;
-    position:relative;
-    overflow:hidden;
-  }
-  a.card::before{
-    content:"";
-    position:absolute;
-    left:0;top:0;bottom:0;
-    width:3px;
-    background:var(--accent);
-    transform:scaleY(0);
-    transform-origin:top;
-    transition:transform .18s ease;
-  }
-  a.card:hover{
-    background:var(--panel-hover);
-    border-color:var(--accent);
-    transform:translateY(-3px);
-  }
-  a.card:hover::before{transform:scaleY(1);}
-
-  .idx{
-    font-size:12px;
-    letter-spacing:.2em;
-    color:var(--accent);
-    margin-bottom:12px;
-  }
-  .card h2{
-    font-size:20px;
-    font-weight:600;
-    margin-bottom:10px;
-  }
-  .card p{
-    color:var(--text-dim);
-    font-size:14px;
-    margin-bottom:18px;
-  }
-  .tags{display:flex;flex-wrap:wrap;gap:8px;}
-  .tag{
-    font-size:12px;
-    color:var(--accent);
-    background:var(--accent-soft);
-    border-radius:6px;
-    padding:3px 9px;
-    white-space:nowrap;
-  }
-
-  .notes{
-    margin-top:52px;
-    border-top:1px solid var(--border);
-    padding-top:26px;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-    gap:26px;
-  }
-  .notes h3{
-    font-size:14px;
-    font-weight:600;
-    color:var(--accent);
-    margin-bottom:9px;
-    letter-spacing:.04em;
-  }
-  .notes p,.notes li{
-    font-size:13.5px;
-    color:var(--text-dim);
-  }
-  .notes ul{list-style:none;}
-  .notes li{padding-left:14px;position:relative;}
-  .notes li::before{
-    content:"";
-    position:absolute;
-    left:0;top:.68em;
-    width:5px;height:5px;
-    border-radius:50%;
-    background:var(--accent);
-  }
-  code{
-    font-family:Consolas,"Courier New",monospace;
-    font-size:12.5px;
-    color:var(--text);
-    background:#181818;
-    border:1px solid var(--border);
-    border-radius:4px;
-    padding:1px 5px;
-  }
-  footer{
-    margin-top:56px;
-    color:#6b6b73;
-    font-size:12.5px;
-    text-align:center;
-  }
+  /* 本页只写"摆在哪里"：配色、圆角、字体、组件观感一律来自 assets/theme.css */
+  body { padding: 56px 0 64px; }
+  header.hero { margin-bottom: 44px; }
+  header.hero h1 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 12px; }
+  .grid--cards { gap: 22px; }
+  .card .idx { font-size: 12px; letter-spacing: .2em; color: var(--accent); margin-bottom: 10px; }
+  .card .tags { margin-top: 16px; }
+  .notes code { font-size: 12px; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<header class="sitebar">
+  <a class="brand" href="index.html">汽车悬挂系统</a>
+  <span class="crumb">综合可视化项目 · <b>导航首页</b></span>
+  <span class="spacer"></span>
+  <span class="tag tag--ghost">4 个视角 · 一套悬挂</span>
+</header>
 
-  <header>
+<div class="wrap">
+  <header class="hero">
     <span class="eyebrow">SUSPENSION SYSTEM</span>
     <h1>汽车悬挂系统 · 综合可视化项目</h1>
     <p class="lede">
-      本项目汇集三个独立视角的可视化页面，从<strong>结构几何</strong>、<strong>控制理论</strong>与<strong>振动特性</strong>
-      三个层面观察同一套汽车悬挂系统。点击下方任意卡片进入对应模块。
+      本项目汇集四个独立视角的可视化页面，从<strong>结构几何</strong>、<strong>控制理论</strong>、<strong>振动特性</strong>
+      与<strong>相空间</strong>四个层面观察同一套汽车悬挂系统。点击下方任意卡片进入对应模块。
     </p>
   </header>
 
-  <div class="grid">
+  <div class="grid grid--cards">
 
     <a class="card" href="modules/macpherson-3d-model.html">
       <div class="idx">VIEW 01</div>
       <h2>麦弗逊式独立前悬挂系统</h2>
       <p>3D 教学模型：可旋转缩放的整车前悬挂总成，支持零件高亮、中文标签、实时读数与爆炸拆解演示，直观理解各部件装配关系与拆装路径。</p>
       <div class="tags">
-        <span class="tag">three.js</span>
+        <span class="tag">three.js · 需联网</span>
         <span class="tag">3D 交互</span>
         <span class="tag">爆炸视图</span>
       </div>
@@ -187,7 +52,7 @@
       <h2>悬挂系统控制理论实验平台</h2>
       <p>基于 1/4 汽车被动悬挂数学模型的仿真实验台：调节质量 m、刚度 k、阻尼 c 与输入激励，实时观察时域响应、Bode 频域特性与相平面轨迹。</p>
       <div class="tags">
-        <span class="tag">Plotly</span>
+        <span class="tag">Plotly · 需联网</span>
         <span class="tag">时域 / 频域</span>
         <span class="tag">相平面</span>
       </div>
@@ -204,6 +69,19 @@
       </div>
     </a>
 
+    <a class="card" href="modules/phase-space-calculator/index.html">
+      <div class="idx">VIEW 04</div>
+      <h2>相空间可视化计算器</h2>
+      <p>把任意微分方程变成相图：一/二/三维相空间、向量场、相流与不动点分类，可写 <code>mÿ + cẏ + ky = cẋ + kx</code>
+         这类学生写法，并按 m/c/k 实时观察悬挂响应；另有随机路面下的蒙特卡洛概率密度与功率谱。含四层自动化验收。</p>
+      <div class="tags">
+        <span class="tag">Canvas</span>
+        <span class="tag">零依赖 · 双击可用</span>
+        <span class="tag">随机振动 / PSD</span>
+        <span class="tag">319+ 项断言</span>
+      </div>
+    </a>
+
   </div>
 
   <section class="notes">
@@ -211,23 +89,31 @@
       <h3>目录结构</h3>
       <ul>
         <li><code>index.html</code> — 本导航首页</li>
+        <li><code>assets/theme.css</code> — 共享设计层（唯一配色来源）</li>
         <li><code>modules/macpherson-3d-model.html</code></li>
         <li><code>modules/suspension-control-lab.html</code></li>
         <li><code>modules/spring-tire-vibration.html</code></li>
+        <li><code>modules/phase-space-calculator/</code> — 多文件项目</li>
       </ul>
     </div>
     <div>
       <h3>运行方式</h3>
-      <p>三个模块均为独立单页，双击即可在浏览器中打开。若需通过 HTTP 访问，也可在本目录启动任意静态服务器后浏览首页。</p>
+      <p>四个模块都是静态页面：<strong>VIEW 03 / 04 双击即可打开</strong>（VIEW 04 完全离线自足）；
+      VIEW 01 / 02 依赖 CDN，需要通过 <code>http</code> 协议访问，可在本目录启动任意静态服务器后浏览。</p>
     </div>
     <div>
       <h3>外部依赖</h3>
-      <p>模块 01 依赖 three.js（jsDelivr CDN，且需通过 <code>http</code>/<code>https</code> 协议打开），模块 02 依赖 Plotly.js（cdn.plot.ly）。首次访问需联网；模块 03 无任何外部依赖。</p>
+      <p>VIEW 01 依赖 three.js（jsDelivr）、VIEW 02 依赖 Plotly.js（cdn.plot.ly），首次访问需联网；
+      VIEW 03 与 VIEW 04 无任何外部依赖。</p>
+    </div>
+    <div>
+      <h3>风格约定</h3>
+      <p>四个模块共用 <a href="STYLE.md">STYLE.md</a> 与 <code>assets/theme.css</code>：同一套配色、字体、圆角与页面外壳，
+      各页面只差布局。新增模块请照此接入。</p>
     </div>
   </section>
 
-  <footer>汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 三个视角，一套悬挂</footer>
-
+  <footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 四个视角，一套悬挂</footer>
 </div>
 </body>
 </html>

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>汽车悬挂系统控制理论可视化实验平台</title>
 
+<!-- 共享设计层：本页唯一的配色/字体/圆角来源（必须先于本页自己的样式表加载） -->
+<link rel="stylesheet" href="../assets/theme.css">
+
 <!-- ==========================================================================
      Plotly.js（CDN 引入）。
      说明：外部脚本标签（script src）在 file:// 下不受跨源策略限制，
@@ -18,41 +21,34 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8" defer></script>
 
 <style>
-/* ======================= 主题变量（深色科技风） ======================= */
-:root{
-  --bg:#1e1e1e;          /* 页面背景（按需求指定） */
-  --card:#23272d;        /* 卡片背景 */
-  --card-2:#2a2f36;      /* 次级卡片 */
-  --line:#363c45;        /* 边框/分隔线 */
-  --fg:#ffffff;          /* 主文字（按需求指定） */
-  --fg-dim:#a9b2be;      /* 次级文字 */
-  --accent:#00adb5;      /* 强调色（按需求指定） */
-  --accent-soft:rgba(0,173,181,.16);
-  --warn:#ffb454;
-  --grid:#313741;        /* 图表网格线 */
-}
+/* ======================= 主题 =======================
+   本页不再自带任何配色变量：颜色 / 字体 / 圆角一律取自共享设计层 assets/theme.css
+   （--bg / --panel / --panel-2 / --line / --fg / --fg-dim / --accent / --warn …）。
+   这里只保留"摆在哪里"：栅格、尺寸、定位、间距。
+   旧名对照（已全部并入共享 token）：
+     --card→--panel   --card-2→--panel-2   --grid→--line   --accent-soft→--accent-soft */
 *{margin:0;padding:0;box-sizing:border-box;}
 html{background:var(--bg);}
 body{
-  background:var(--bg); color:var(--fg); padding:18px 20px 44px;
-  font-family:"Segoe UI","Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  background:var(--bg); color:var(--fg); padding:0 0 40px;
+  font-family:var(--font-sans);
   font-size:14px; line-height:1.55;
 }
 
-/* ======================= 顶部标题栏 ======================= */
-header{margin-bottom:16px;}
-h1{font-size:19px; font-weight:600; letter-spacing:.3px;}
+/* ======================= 顶部标题栏（不含统一顶栏 header.sitebar） ======================= */
+header:not(.sitebar){margin-bottom:16px;}
+h1{font-size:19px; font-weight:600; letter-spacing:.3px; margin:0;}
 h1 .badge{
-  display:inline-block; margin-left:8px; padding:2px 8px; border-radius:20px;
+  display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px;
   font-size:11px; font-weight:500; vertical-align:2px;
-  color:var(--accent); background:var(--accent-soft); border:1px solid rgba(0,173,181,.35);
+  color:var(--accent); background:var(--accent-soft); border:1px solid var(--accent-line);
 }
 .chain{
   margin-top:8px; font-size:12.5px; color:var(--fg-dim);
   display:flex; flex-wrap:wrap; align-items:center; gap:6px;
 }
 .chain b{color:var(--fg); font-weight:600;}
-.chain .tag{padding:1px 7px; border-radius:5px; background:var(--card-2); border:1px solid var(--line);}
+.chain .tag{padding:1px 7px; border-radius:var(--radius-xs); background:var(--panel-2); border:1px solid var(--line);}
 .chain .arw{color:var(--accent); font-weight:700;}
 
 /* ======================= 主体：左控制面板 + 右图区 ======================= */
@@ -62,14 +58,14 @@ main{display:grid; grid-template-columns:326px minmax(0,1fr); gap:16px; align-it
 #panel{
   position:sticky; top:14px;
   /* 面板比视口高时可自己滚动，避免内容被裁掉却看不见。
-     上限按 (视口高 − 130px) 取：面板尚在正常文档流中时（页首、还没触发 sticky），
-     它的顶部并不在 top:14px 而在页头之下，若仍按 100vh 留高，最下面一张卡片
-     会落到视口之外——首次打开就觉得"少了一块"。 */
-  max-height:calc(100vh - 130px); overflow-y:auto;
+     上限按 (视口高 − 194px) 取：面板尚在正常文档流中时（页首、还没触发 sticky），
+     它的顶部并不在 top:14px，而在统一顶栏 .sitebar（约 48px）与页头（约 60px）之下；
+     若仍按 100vh 留高，最下面一张卡片会落到视口之外——首次打开就觉得"少了一块"。 */
+  max-height:calc(100vh - 194px); overflow-y:auto;
   display:flex; flex-direction:column; gap:12px;
 }
 .card{
-  background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 13px;
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 13px;
 }
 .card > h2{
   font-size:12px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase;
@@ -77,25 +73,28 @@ main{display:grid; grid-template-columns:326px minmax(0,1fr); gap:16px; align-it
 }
 
 /* ---------- 滑条 ---------- */
-.slider-row{margin-bottom:11px;}
+/* theme.css 的 .slider-row 是三列网格（标签 / 滑杆 / 读数），本页滑杆行是
+   "标题 + 滑杆 + 量程"的竖排结构，故显式回到块级——只改摆位，配色仍用同一套 token
+   （滑杆轨道/滑块观感由 theme.css 的 input[type=range] 提供，取值一一对应）。 */
+.slider-row{display:block; margin-bottom:11px;}
 .slider-row:last-child{margin-bottom:2px;}
 .slider-head{display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; margin-bottom:5px;}
 .slider-head .name{color:var(--fg);}
 .slider-head .name em{font-style:normal; color:var(--fg-dim); font-size:11.5px;}
-.slider-head .val{font-family:Consolas,"Courier New",monospace; font-size:13px; color:var(--accent); font-weight:600;}
+.slider-head .val{font-family:var(--font-mono); font-size:13px; color:var(--accent-2); font-weight:600;}
 input[type=range]{
   -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:3px;
-  background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,50%),#3d434c var(--fill,50%),#3d434c 100%);
+  background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,50%),var(--line) var(--fill,50%),var(--line) 100%);
   outline:none; cursor:pointer;
 }
 input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none; appearance:none; width:15px; height:15px; border-radius:50%;
-  background:#0e1114; border:3px solid var(--accent); box-shadow:0 0 0 3px rgba(0,173,181,.15);
+  background:var(--bg-deep); border:3px solid var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
 }
 input[type=range]::-moz-range-thumb{
-  width:15px; height:15px; border-radius:50%; background:#0e1114; border:3px solid var(--accent);
+  width:15px; height:15px; border-radius:50%; background:var(--bg-deep); border:3px solid var(--accent);
 }
-.range-scale{display:flex; justify-content:space-between; font-size:10.5px; color:#7c8592; margin-top:3px;}
+.range-scale{display:flex; justify-content:space-between; font-size:10.5px; color:var(--fg-mute); margin-top:3px;}
 
 /* ---------- ω 滑条上的"固有频率标记" ----------
    滑条外层要 position:relative，标记才能按百分比贴到轨道上（见 updateWnTick）。
@@ -111,66 +110,82 @@ input[type=range]::-moz-range-thumb{
 }
 .wn-tick .dot{
   width:9px; height:9px; border-radius:2px; transform:rotate(45deg);
-  background:var(--warn); border:1px solid #14171b; box-shadow:0 0 0 2px rgba(255,180,84,.28);
-  transition:background .12s, box-shadow .12s;
+  background:var(--warn); border:1px solid var(--bg-deep); box-shadow:0 0 0 2px rgba(255,180,84,.28);
+  transition:filter .12s, box-shadow .12s;
 }
 .wn-tick:hover .dot, .wn-tick:focus-visible .dot{
-  background:#ffd08a; box-shadow:0 0 0 4px rgba(255,180,84,.4);
+  filter:brightness(1.18); box-shadow:0 0 0 4px rgba(255,180,84,.4);
 }
 .wn-tick:focus{outline:none;}
 .tickmark{color:var(--warn); font-weight:600;}
 
 /* ---------- 下拉框 ---------- */
-select{
-  width:100%; padding:7px 9px; border-radius:7px; font-size:13px;
-  background:var(--card-2); color:var(--fg); border:1px solid var(--line); cursor:pointer;
+/* 用 #panel 提高一级特异性：theme.css 里的 select 规则带属性选择器
+   （input[type="number"], … , select），同权重时会把这里的尺寸盖掉。 */
+#panel select{
+  width:100%; padding:7px 9px; border-radius:var(--radius-sm); font-size:13px;
+  background:var(--panel-2); color:var(--fg); border:1px solid var(--line); cursor:pointer;
 }
-select:focus{outline:1px solid var(--accent);}
+#panel select:focus{outline:1px solid var(--accent);}
 
-/* ---------- 派生参数与指标 ---------- */
-.stat{display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; border-bottom:1px dashed #31363f;}
-.stat:last-child{border-bottom:none;}
-.stat .k{font-size:12.5px; color:var(--fg-dim);}
-.stat .v{font-family:Consolas,"Courier New",monospace; font-size:14px; font-weight:600; color:var(--fg);}
-.stat .v.accent{color:var(--accent);}
-.stat .v.warn{color:var(--warn);}
-.sub{font-size:11px; color:#7c8592; font-weight:400; margin-left:4px;}
+/* ---------- 派生参数与指标 ----------
+   读数行 .stat 直接复用 theme.css 的 .row/.ro/.stat 三合一规则（--bg-deep 底 + --line-soft 描边
+   + --radius-xs 圆角 + 等宽数值），这里只补这一摞行之间的间距与数值字号，不再自己写颜色。 */
+.stat{margin-bottom:5px;}
+.stat:last-child{margin-bottom:0;}
+.stat .v{font-size:14px; font-weight:600;}
+.sub{font-size:11px; color:var(--fg-mute); font-weight:400; margin-left:4px;}
 #sysDesc{font-size:12.5px; color:var(--fg-dim); line-height:1.6; margin-top:8px;
-  padding-top:8px; border-top:1px dashed #31363f;}
+  padding-top:8px; border-top:1px dashed var(--line-soft);}
 #sysDesc b{color:var(--accent);}
 
 /* ---------- 提示块 ---------- */
-.legend-note{font-size:11.5px; color:var(--fg-dim); line-height:1.7;}
+/* theme.css 的 .legend-note 是横向 flex（给图例用），本页这几处是成段说明文字，
+   故显式回到块级；虚线/实线的颜色与三张图里的曲线一一对应（--s2 输入 / --s1 位移）。 */
+.legend-note{display:block; font-size:11.5px; color:var(--fg-dim); line-height:1.7;}
 .legend-note .dot{display:inline-block; width:16px; height:0; border-top-width:2px; vertical-align:4px; margin-right:5px;}
-.legend-note .dot.dash{border-top-style:dashed; border-top-color:#8a94a6;}
-.legend-note .dot.solid{border-top-style:solid; border-top-color:var(--accent);}
-.legend-note code{font-family:Consolas,monospace; color:var(--accent); font-size:11.5px;}
+.legend-note .dot.dash{border-top-style:dashed; border-top-color:var(--s2);}
+.legend-note .dot.solid{border-top-style:solid; border-top-color:var(--s1);}
+.legend-note code{font-family:var(--font-mono); color:var(--accent); font-size:11.5px;}
 label.chk{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--fg-dim);
   cursor:pointer; margin-top:9px;}
 label.chk input{accent-color:var(--accent); width:14px; height:14px; cursor:pointer;}
 button#reset{
-  margin-top:9px; width:100%; padding:7px; border-radius:7px; cursor:pointer; font-size:12.5px;
-  background:var(--card-2); color:var(--fg); border:1px solid var(--line);
+  margin-top:9px; width:100%; padding:7px; border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px;
+  background:var(--panel-2); color:var(--fg); border:1px solid var(--line);
 }
 button#reset:hover{border-color:var(--accent); color:var(--accent);}
 
 /* ======================= 右侧图表区 ======================= */
 #charts{display:flex; flex-direction:column; gap:14px; min-width:0;}
-.chart-card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 8px 2px;}
-/* 图表容器必须有确定高度，Plotly 才能算出画布尺寸；min-height:0 防止 flex 撑住不让缩 */
-.chart-box{height:330px; min-height:0; width:100%;}
+.chart-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:6px 8px 2px;}
+/* 图表容器必须有确定高度，Plotly 才能算出画布尺寸；min-height:0 防止 flex 撑住不让缩。
+   高度是固定值（不靠 flex:1 撑开），所以下面加了页脚也不会把图压成 0 高。 */
+.chart-box{
+  height:330px; min-height:0; width:100%;
+  background:transparent; border:0; border-radius:0;   /* 底色与描边由外层 .chart-card 提供 */
+}
 @media (max-height:760px){ .chart-box{height:290px;} }
 
-/* 离线提示 */
-#warn{
-  display:none; margin-bottom:14px; padding:10px 13px; border-radius:9px; font-size:12.5px;
-  background:rgba(255,180,84,.1); border:1px solid rgba(255,180,84,.4); color:var(--warn);
-}
-footer{margin-top:16px; font-size:11.5px; color:#7c8592; line-height:1.8;}
+/* 离线提示：配色/字号来自 theme.css 的 #warn，这里只留摆位与初始隐藏 */
+#warn{display:none; margin-bottom:14px;}
+
+/* 页脚说明（模型与数值方法）；统一页脚 .site-foot 紧随其后，样式来自 theme.css */
+footer:not(.site-foot){margin-top:16px; font-size:11.5px; color:var(--fg-mute); line-height:1.8;}
 </style>
 </head>
 
 <body>
+<!-- 统一页面外壳（STYLE.md 第二节）。本页是可滚动的普通页面，故顶栏用非固定版本
+     （不加 .sitebar--fixed，也不给 body 加 .has-sitebar--fixed）。 -->
+<header class="sitebar">
+  <a class="brand" href="../index.html">汽车悬挂系统</a>
+  <span class="crumb">VIEW 02 · <b>控制理论实验平台</b></span>
+  <span class="spacer"></span>
+  <span class="tag tag--ghost">Plotly · 需联网</span>
+</header>
+
+<div class="wrap">
 <header>
   <h1>汽车悬挂系统控制理论可视化实验平台<span class="badge">1/4 车被动悬挂</span></h1>
   <div class="chain">
@@ -208,7 +223,7 @@ footer{margin-top:16px; font-size:11.5px; color:#7c8592; line-height:1.8;}
       </div>
 
       <!-- 定频正弦的外因参数：仅在"定频正弦"模式下显示 -->
-      <div id="sineBox" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #31363f;">
+      <div id="sineBox" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line-soft);">
         <div class="slider-row">
           <div class="slider-head">
             <span class="name">激励频率 ω <em>(rad/s · 对数滑条)</em></span>
@@ -344,6 +359,10 @@ footer{margin-top:16px; font-size:11.5px; color:#7c8592; line-height:1.8;}
   模型：1/4 汽车被动悬挂，m·y″ + c·y′ + k·y = c·x′ + k·x，G(s) = (c·s + k)/(m·s² + c·s + k)。<br>
   数值求解：四阶龙格-库塔（时域初值已计入阶跃/脉冲在 t=0 处的跳变，由拉氏变换初值定理给出）。
 </footer>
+
+<!-- 统一页脚（STYLE.md 第二节） -->
+<footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 四个视角，一套悬挂</footer>
+</div><!-- /.wrap -->
 
 <script>
 /* ============================================================================
@@ -599,21 +618,26 @@ var PLOT_CONFIG = {
   modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines']
 };
 
-/* 统一坐标轴样式 */
+/* 统一坐标轴样式。
+   图表里的颜色只能写字面量，故一律取 assets/theme.css 中 token 的同一个值，并在紧邻处注明 token。
+   坐标文字用 --fg-mute/--fg-dim，网格线用 --line-soft（比 --line 更弱，不刺眼），轴线用 --line/--line-strong。 */
 function ax(titleText) {
   return {
-    title: { text: titleText, font: { color: '#e8eaed', size: 12 } },
-    gridcolor: '#313741', zerolinecolor: '#4a515c', linecolor: '#4a515c',
-    tickfont: { color: '#c9d1d9', size: 11 }, automargin: true
+    title: { text: titleText, font: { color: '#a9b2be', size: 12 } },   // --fg-dim（坐标轴标题）
+    gridcolor: '#2c3138',                                              // --line-soft（网格线）
+    zerolinecolor: '#363c45',                                          // --line（零线）
+    linecolor: '#454c57',                                              // --line-strong（轴线/边框）
+    tickfont: { color: '#7b848f', size: 11 },                          // --fg-mute（刻度文字）
+    automargin: true
   };
 }
 var LAYOUT_BASE = {
-  paper_bgcolor: '#23272d', plot_bgcolor: '#23272d',
-  font: { color: '#e8eaed', family: '"Segoe UI","Microsoft YaHei",sans-serif', size: 11 },
+  paper_bgcolor: '#141719', plot_bgcolor: '#141719',                   // --bg-deep（图表底色/画布）
+  font: { color: '#a9b2be', family: '"Segoe UI","Microsoft YaHei",sans-serif', size: 11 },  // --fg-dim
   margin: { l: 62, r: 18, t: 46, b: 46 },
   showlegend: true,
   legend: { orientation: 'h', x: 0, y: 1.14, bgcolor: 'rgba(0,0,0,0)', font: { size: 11 } },
-  title: { font: { color: '#ffffff', size: 12.5 } }
+  title: { font: { color: '#ffffff', size: 12.5 } }                    // --fg（图表标题）
 };
 
 /* ---------- DOM 引用 ---------- */
@@ -719,11 +743,11 @@ function buildModel() {
     var hgt = Math.max(ymax * 1.15, 1e-6);
     xTrace = {
       x: [0, 0.045, 0.09], y: [0, hgt, 0], name: 'x(t) = δ(t)（示意脉冲）',
-      mode: 'lines', line: { color: '#8a94a6', width: 2, dash: 'dash' }, hoverinfo: 'skip'
+      mode: 'lines', line: { color: '#f2994a', width: 2, dash: 'dash' }, hoverinfo: 'skip'   // --s2 输入/路面
     };
     extraAnno.push({
       x: 0.09, y: hgt, xref: 'x', yref: 'y', text: 'δ(t)', showarrow: false,
-      font: { color: '#8a94a6', size: 11 }, xanchor: 'left', yanchor: 'middle'
+      font: { color: '#f2994a', size: 11 }, xanchor: 'left', yanchor: 'middle'              // --s2
     });
   } else {
     var xName = state.input === 'step' ? 'x(t) 阶跃输入'
@@ -731,19 +755,19 @@ function buildModel() {
                                         : 'x(t) 扫频输入');
     xTrace = {
       x: toArr(r.t), y: toArr(r.x), name: xName,
-      mode: 'lines', line: { color: '#8a94a6', width: 2, dash: 'dash' }
+      mode: 'lines', line: { color: '#f2994a', width: 2, dash: 'dash' }   // --s2 输入/路面（虚线 = 外因）
     };
   }
 
   var d1 = [xTrace, {
     x: toArr(r.t), y: toArr(r.y), name: 'y(t) 车身位移（当前内因）',
-    mode: 'lines', line: { color: '#00adb5', width: 2.6 }
+    mode: 'lines', line: { color: '#4f9cf9', width: 2.6 }   // --s1 位移
   }];
   if (state.ref) {
     var rr = simulate(REF_PARAMS.m, REF_PARAMS.k, REF_PARAMS.c, state.input, win.T, win.N, A, state.w);
     d1.push({
       x: toArr(rr.t), y: toArr(rr.y), name: 'y(t) 参照内因（默认 m/k/c）',
-      mode: 'lines', line: { color: '#5d6673', width: 1.5, dash: 'dot' }
+      mode: 'lines', line: { color: '#2fbf8f', width: 1.5, dash: 'dot' }   // --s3 被动悬挂（参照）
     });
   }
 
@@ -753,14 +777,14 @@ function buildModel() {
     var ampOut = sr.ratioTheory * Math.abs(A);
     shapes1 = [
       { type: 'line', x0: 0, x1: win.T, y0:  ampOut, y1:  ampOut,
-        line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } },
+        line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } },   // --accent 35%：稳态参考线
       { type: 'line', x0: 0, x1: win.T, y0: -ampOut, y1: -ampOut,
         line: { color: 'rgba(0,173,181,.35)', width: 1, dash: 'dash' } }
     ];
     anno1 = extraAnno.concat([{
       x: win.T, y: ampOut, xref: 'x', yref: 'y', xanchor: 'right', yanchor: 'bottom',
       text: '稳态幅值 ±|G(jω)|·A = ' + fmt(ampOut, 3) + ' m', showarrow: false,
-      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }
+      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }   // --accent 85%：稳态标注文字
     }]);
   } else {
     shapes1 = [{ type: 'line', x0: 0, x1: win.T, y0: met.yss, y1: met.yss,
@@ -768,7 +792,7 @@ function buildModel() {
     anno1 = extraAnno.concat([{
       x: win.T, y: met.yss, xref: 'x', yref: 'y', xanchor: 'right', yanchor: 'bottom',
       text: '阶跃稳态 y∞ = ' + fmt(met.yss, 2) + ' m', showarrow: false,
-      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }
+      font: { color: 'rgba(0,173,181,.85)', size: 10.5 }   // --accent 85%：稳态标注文字
     }]);
   }
 
@@ -790,30 +814,30 @@ function buildModel() {
 
   var d2 = [{
     x: toArr(wg), y: dbArr, name: '|Y(jω)/X(jω)|',
-    mode: 'lines', line: { color: '#00adb5', width: 2.6 }
+    mode: 'lines', line: { color: '#4f9cf9', width: 2.6 }   // --s1 位移传递比（位移类）
   }];
   var shapes2 = [{ type: 'line', x0: p.wn, x1: p.wn, y0: 0, y1: 1, yref: 'paper',
-                   line: { color: 'rgba(255,180,84,.55)', width: 1, dash: 'dot' } }];
+                   line: { color: 'rgba(255,180,84,.55)', width: 1, dash: 'dot' } }];   // --warn 55%：ωn 参考线
   var anno2 = [{
     x: p.wn, y: 1, xref: 'x', yref: 'paper', xanchor: 'left', yanchor: 'top',
-    text: ' ωn = ' + fmt(p.wn, 3), showarrow: false, font: { color: '#ffb454', size: 10.5 }
+    text: ' ωn = ' + fmt(p.wn, 3), showarrow: false, font: { color: '#ffb454', size: 10.5 }   // --warn
   }, {
     x: pk.w, y: pk.db, xref: 'x', yref: 'y', xanchor: 'center', yanchor: 'bottom',
     text: '共振峰 ' + fmt(pk.db, 2) + ' dB @ ' + fmt(pk.w, 2) + ' rad/s',
-    showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1,
-    font: { color: '#ffb454', size: 10.5 }, ax: 0, ay: -26
+    showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1,                 // --warn
+    font: { color: '#ffb454', size: 10.5 }, ax: 0, ay: -26                                // --warn
   }];
   if (isSine) {
     // 当前工作点：横坐标 ω、纵坐标 |G(jω)|，与时域图的稳态幅值互相印证
     var dbNow = magnitudeDb(m, k, c, state.w);
     d2.push({
       x: [state.w], y: [dbNow], name: '当前正弦工作点 ω', mode: 'markers+text',
-      marker: { color: '#ff5252', size: 12, symbol: 'circle-open', line: { width: 2.5 } },
+      marker: { color: '#57e0ff', size: 12, symbol: 'circle-open', line: { width: 2.5 } },   // --accent-2 当前状态点
       text: ['ω = ' + fmt(state.w, 3)], textposition: 'top right',
-      textfont: { color: '#ff5252', size: 10.5 }
+      textfont: { color: '#57e0ff', size: 10.5 }                                             // --accent-2
     });
     shapes2.push({ type: 'line', x0: state.w, x1: state.w, y0: 0, y1: 1, yref: 'paper',
-                   line: { color: 'rgba(255,82,82,.5)', width: 1, dash: 'dot' } });
+                   line: { color: 'rgba(87,224,255,.5)', width: 1, dash: 'dot' } });          // --accent-2 50%
   }
   var l2 = Object.assign({}, LAYOUT_BASE, {
     title: { text: '② 频域响应：幅频特性（Bode 幅值图）', font: { color: '#ffffff', size: 12.5 } },
@@ -828,11 +852,11 @@ function buildModel() {
   var n = ph.dy.length;
   var d3 = [
     { x: toArr(ph.dy), y: toArr(ph.v), name: '相轨迹 (Δy, ẏ)',
-      mode: 'lines', line: { color: '#00adb5', width: 2.2 } },
+      mode: 'lines', line: { color: '#4f9cf9', width: 2.2 } },   // --s1 位移-速度轨迹（位移类）
     { x: [ph.dy[0]], y: [ph.v[0]], name: '起点 (t = 0⁺)',
-      mode: 'markers', marker: { color: '#ffb454', size: 9, line: { color: '#1e1e1e', width: 1 } } },
+      mode: 'markers', marker: { color: '#ffb454', size: 9, line: { color: '#141719', width: 1 } } },   // --warn 起点 / --bg-deep 描边
     { x: [0], y: [0], name: '平衡点（原点）',
-      mode: 'markers', marker: { color: '#ff5252', size: 10, symbol: 'x' } }
+      mode: 'markers', marker: { color: '#57e0ff', size: 10, symbol: 'x' } }   // --accent-2 平衡点
   ];
   var l3 = Object.assign({}, LAYOUT_BASE, {
     title: { text: '③ 相平面：位移—速度轨迹（阶跃响应，向平衡点收敛）', font: { color: '#ffffff', size: 12.5 } },
@@ -841,10 +865,10 @@ function buildModel() {
     annotations: [{
       x: ph.dy[Math.min(2, n - 1)], y: ph.v[Math.min(2, n - 1)],
       ax: ph.dy[0], ay: ph.v[0], xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
-      showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1.2, text: ''
+      showarrow: true, arrowhead: 2, arrowcolor: '#ffb454', arrowwidth: 1.2, text: ''   // --warn
     }, {
       x: 0, y: 0, xref: 'x', yref: 'y', xanchor: 'left', yanchor: 'bottom',
-      text: ' 平衡点 (0, 0)', showarrow: false, font: { color: '#ff5252', size: 10.5 }
+      text: ' 平衡点 (0, 0)', showarrow: false, font: { color: '#57e0ff', size: 10.5 }   // --accent-2
     }]
   });
 

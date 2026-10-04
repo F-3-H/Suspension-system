@@ -1,88 +1,102 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>麦弗逊式独立前悬挂系统 · 3D 教学模型</title>
+<link rel="stylesheet" href="../assets/theme.css">
 <style>
+  /* 配色一律取自 ../assets/theme.css 的 token；本块只写“摆在哪里”（定位/尺寸/层叠） */
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { width:100%; height:100%; overflow:hidden;
-    font-family:"Segoe UI","Microsoft YaHei",sans-serif; background:#15181c; }
+    font-family:var(--font-sans); background:var(--bg); }
   #app { position:fixed; inset:0; }
   #app canvas { display:block; }
 
   /* ---------- 紧凑控制面板 ---------- */
-  #panel { position:fixed; top:12px; left:12px; width:224px; padding:10px 12px 8px;
-    border-radius:10px; z-index:10; user-select:none; font-size:12px;
-    background:rgba(22,26,31,.85); color:#e6eaee; border:1px solid rgba(255,255,255,.09);
-    backdrop-filter:blur(10px); box-shadow:0 4px 18px rgba(0,0,0,.35);
-    max-height:calc(100vh - 24px); overflow-y:auto; }
-  body.light #panel { background:rgba(255,255,255,.9); color:#22282f;
+  /* 固定顶栏高约 50px：面板从 top:12px 下移到 top:64px，底部再让出约 40px 给固定页脚 */
+  #panel { position:fixed; top:64px; left:12px; width:224px; padding:10px 12px 8px;
+    border-radius:var(--radius); z-index:10; user-select:none; font-size:12px;
+    background:rgba(35,39,45,.86); color:var(--fg); border:1px solid var(--line);
+    backdrop-filter:blur(10px); box-shadow:var(--shadow);
+    max-height:calc(100vh - 104px); overflow-y:auto; }
+  body.light #panel { background:rgba(255,255,255,.9); color:var(--panel);
     border-color:rgba(0,0,0,.08); box-shadow:0 4px 18px rgba(0,0,0,.12); }
   .title { font-size:13px; font-weight:600; line-height:1.45; margin-bottom:8px; }
-  .title span { opacity:.6; font-weight:400; font-size:11px; }
+  .title span { color:var(--fg-mute); font-weight:400; font-size:11px; }
   .btns { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:8px; }
-  button { appearance:none; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06);
-    color:inherit; font-size:11.5px; padding:5px 4px; border-radius:6px; cursor:pointer;
+  button { appearance:none; border:1px solid var(--line-strong); background:var(--panel-2);
+    color:inherit; font-size:11.5px; padding:5px 4px; border-radius:var(--radius-xs); cursor:pointer;
     transition:background .15s; font-family:inherit; }
-  button:hover { background:rgba(255,255,255,.14); }
-  button.on { background:#2f6fd0; border-color:#2f6fd0; color:#fff; }
+  button:hover { background:var(--panel-3); border-color:var(--accent); }
+  button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
   body.light button { border-color:rgba(0,0,0,.15); background:rgba(0,0,0,.04); }
   body.light button:hover { background:rgba(0,0,0,.09); }
-  body.light button.on { background:#2f6fd0; border-color:#2f6fd0; color:#fff; }
+  body.light button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
   .slider { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
-  .slider input[type=range] { flex:1; accent-color:#2f6fd0; height:14px; cursor:pointer; }
-  .slider #expVal { width:34px; text-align:right; opacity:.75; font-variant-numeric:tabular-nums; }
+  /* 轨道/滑块观感沿用 theme.css 的 input[type=range]（--line 轨道 + --accent 滑块） */
+  .slider input[type=range] { flex:1; cursor:pointer; }
+  .slider #expVal { width:34px; text-align:right; color:var(--accent-2); font-variant-numeric:tabular-nums; }
   .stats { display:grid; gap:2px; margin-bottom:8px; font-size:11px;
-    border-top:1px solid rgba(255,255,255,.1); padding-top:6px; }
+    border-top:1px solid var(--line-soft); padding-top:6px; }
   body.light .stats { border-top-color:rgba(0,0,0,.1); }
   .stats div { display:flex; justify-content:space-between; gap:10px; }
-  .stats span { opacity:.6; }
-  .stats b { font-weight:600; color:#7fb3f5; font-variant-numeric:tabular-nums; }
-  body.light .stats b { color:#2f6fd0; }
-  .legend { display:grid; gap:2px; border-top:1px solid rgba(255,255,255,.1); padding-top:7px; }
+  .stats span { color:var(--fg-dim); }
+  .stats b { font-weight:600; color:var(--accent-2); font-variant-numeric:tabular-nums; }
+  body.light .stats b { color:var(--accent); }
+  .legend { display:grid; gap:2px; border-top:1px solid var(--line-soft); padding-top:7px; }
   body.light .legend { border-top-color:rgba(0,0,0,.1); }
-  .lg { display:flex; align-items:center; gap:7px; padding:3px 6px; border-radius:5px; cursor:pointer; }
-  .lg:hover { background:rgba(255,255,255,.09); }
+  .lg { display:flex; align-items:center; gap:7px; padding:3px 6px; border-radius:var(--radius-xs); cursor:pointer; }
+  .lg:hover { background:var(--panel-3); }
   body.light .lg:hover { background:rgba(0,0,0,.06); }
-  .lg i { width:10px; height:10px; border-radius:2px; flex:none; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
-  .lg.on { background:rgba(47,111,208,.24); box-shadow:inset 0 0 0 1px rgba(47,111,208,.6); }
-  body.light .lg.on { background:rgba(47,111,208,.18); }
+  .lg i { width:10px; height:10px; border-radius:var(--radius-xs); flex:none; box-shadow:0 0 0 1px rgba(0,0,0,.25); }
+  .lg.on { background:var(--accent-soft); box-shadow:inset 0 0 0 1px var(--accent-line); }
+  body.light .lg.on { background:var(--accent-soft); }
   .lg .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .lg .eye { flex:none; margin-left:auto; padding:1px 6px; font-size:11px; line-height:1.3; border:1px solid rgba(255,255,255,.18); border-radius:4px; background:rgba(255,255,255,.06); color:inherit; opacity:.85; cursor:pointer; }
-  .lg .eye:hover { opacity:1; background:rgba(255,255,255,.14); }
+  .lg .eye { flex:none; margin-left:auto; padding:1px 6px; font-size:11px; line-height:1.3; border:1px solid var(--line-strong); border-radius:var(--radius-xs); background:var(--panel-2); color:inherit; cursor:pointer; }
+  .lg .eye:hover { background:var(--panel-3); border-color:var(--accent); }
   body.light .lg .eye { border-color:rgba(0,0,0,.2); background:rgba(0,0,0,.05); }
   .lg .eye.off { opacity:.45; border-style:dashed; }
-  .traces { border-top:1px solid rgba(255,255,255,.1); padding-top:7px; margin-top:4px; display:grid; gap:2px; }
+  .traces { border-top:1px solid var(--line-soft); padding-top:7px; margin-top:4px; display:grid; gap:2px; }
   body.light .traces { border-top-color:rgba(0,0,0,.1); }
-  .traces .ttl { font-size:11px; opacity:.6; margin-bottom:1px; }
-  .trow { display:flex; align-items:center; gap:6px; font-size:11.5px; cursor:pointer; padding:2px 5px; border-radius:5px; }
-  .trow:hover { background:rgba(255,255,255,.08); }
+  .traces .ttl { font-size:11px; color:var(--fg-mute); margin-bottom:1px; }
+  .trow { display:flex; align-items:center; gap:6px; font-size:11.5px; cursor:pointer; padding:2px 5px; border-radius:var(--radius-xs); }
+  .trow:hover { background:var(--panel-3); }
   body.light .trow:hover { background:rgba(0,0,0,.05); }
-  .trow input { accent-color:#2f6fd0; cursor:pointer; margin:0; }
+  .trow input { accent-color:var(--accent); cursor:pointer; margin:0; }
   .trow i { width:15px; height:3px; border-radius:2px; flex:none; }
-  #chartWrap { position:fixed; right:12px; bottom:12px; z-index:10; padding:6px 8px 5px; border-radius:10px;
-    background:rgba(22,26,31,.85); border:1px solid rgba(255,255,255,.09); backdrop-filter:blur(10px); box-shadow:0 4px 18px rgba(0,0,0,.35); }
+  #chartWrap { position:fixed; right:12px; bottom:12px; z-index:10; padding:6px 8px 5px; border-radius:var(--radius);
+    background:rgba(35,39,45,.86); border:1px solid var(--line); backdrop-filter:blur(10px); box-shadow:var(--shadow); }
   body.light #chartWrap { background:rgba(255,255,255,.9); border-color:rgba(0,0,0,.08); }
-  #chartWrap .cap { font-size:10.5px; opacity:.6; margin-bottom:3px; }
-  #chartWrap .fn { font-size:10px; opacity:.5; margin-top:4px; line-height:1.45; }
+  #chartWrap .cap { font-size:10.5px; color:var(--fg-dim); margin-bottom:3px; }
+  #chartWrap .fn { font-size:10px; color:var(--fg-mute); margin-top:4px; line-height:1.45; }
   #chart { display:block; }
 
   #hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); z-index:10;
-    font-size:11.5px; opacity:.55; color:#cfd6dd; pointer-events:none; white-space:nowrap; }
-  body.light #hint { color:#444b53; }
+    font-size:11.5px; opacity:.7; color:var(--fg-dim); pointer-events:none; white-space:nowrap; }
+  body.light #hint { color:rgba(0,0,0,.6); }
 
   /* ---------- 3D 部件标签 ---------- */
   .lab { display:flex; align-items:center; gap:6px; white-space:nowrap; pointer-events:none;
     transform:translate(14px,-50%); padding:3px 10px 3px 7px; border-radius:999px; font-size:12px;
-    background:rgba(18,22,27,.88); color:#eef2f6; border:1px solid rgba(255,255,255,.14);
+    background:rgba(26,29,33,.88); color:var(--fg); border:1px solid var(--line);
     box-shadow:0 2px 8px rgba(0,0,0,.3); }
-  body.light .lab { background:rgba(255,255,255,.92); color:#1d232a;
+  body.light .lab { background:rgba(255,255,255,.92); color:rgba(0,0,0,.87);
     border-color:rgba(0,0,0,.12); box-shadow:0 2px 8px rgba(0,0,0,.15); }
   .lab i { width:9px; height:9px; border-radius:50%; flex:none; }
   .lab::before { content:""; position:absolute; left:-13px; top:50%; width:13px; height:1px;
     background:rgba(255,255,255,.35); }
   body.light .lab::before { background:rgba(0,0,0,.3); }
+
+  /* 浅色主题（body.light）下同一批 token 反相使用，保证读数/图例文字仍有对比度 */
+  body.light .stats span, body.light #chartWrap .cap, body.light #chartWrap .fn { color:var(--fg-mute); }
+  body.light .slider #expVal { color:var(--accent); }
+  body.light .legend { color:var(--panel); }
+
+  /* ---------- 统一页脚（本页整屏无滚动，固定在左下角，并让开画布上的控件） ---------- */
+  footer.site-foot { position:fixed; left:12px; right:auto; bottom:6px; z-index:9;
+    margin:0; padding:0; border:0; background:transparent; text-align:left;
+    font-size:11.5px; line-height:1.5; pointer-events:none; }
 </style>
 <script type="importmap">
 {
@@ -94,6 +108,12 @@
 </script>
 </head>
 <body>
+<header class="sitebar sitebar--fixed">
+  <a class="brand" href="../index.html">汽车悬挂系统</a>
+  <span class="crumb">VIEW 01 · <b>麦弗逊式独立前悬挂系统</b></span>
+  <span class="spacer"></span>
+  <span class="tag tag--ghost">three.js · 需联网</span>
+</header>
 <div id="app"></div>
 
 <div id="panel">
@@ -129,10 +149,11 @@
     <span id="expVal">0%</span>
   </div>
   <div class="traces">
+    <!-- 曲线色一律取自 theme token：地面输入 = --s2，左支柱顶 = --accent-2，右支柱顶 = --ok -->
     <div class="ttl">竖向位移曲线</div>
-    <label class="trow"><input type="checkbox" id="cbR" checked><i style="background:#ff9f43"></i>地面输入 r(t)</label>
-    <label class="trow"><input type="checkbox" id="cbY1" checked><i style="background:#2ec4e8"></i>左支柱顶 y₁(t)</label>
-    <label class="trow"><input type="checkbox" id="cbY2" checked><i style="background:#51cf66"></i>右支柱顶 y₂(t)</label>
+    <label class="trow"><input type="checkbox" id="cbR" checked><i style="background:#f2994a"></i>地面输入 r(t)</label>
+    <label class="trow"><input type="checkbox" id="cbY1" checked><i style="background:#57e0ff"></i>左支柱顶 y₁(t)</label>
+    <label class="trow"><input type="checkbox" id="cbY2" checked><i style="background:#3ddc97"></i>右支柱顶 y₂(t)</label>
   </div>
   <div class="legend" id="legend"></div>
 </div>
@@ -143,6 +164,8 @@
   <canvas id="chart" width="380" height="150"></canvas>
 </div>
 
+<footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 四个视角，一套悬挂</footer>
+
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -151,7 +174,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 /* ================= 基础场景 ================= */
 const app = document.getElementById('app');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x15181c);
+scene.background = new THREE.Color(0x1a1d21);   // --bg
 
 const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 1, 2000);
 const CAM_HOME = new THREE.Vector3(-182, 138, 214);
@@ -184,8 +207,8 @@ controls.autoRotateSpeed = 1.4;
 controls.maxPolarAngle = Math.PI * 0.92;
 
 /* 灯光：技术可视化 —— 均匀、柔和、金属质感 */
-scene.add(new THREE.HemisphereLight(0xffffff, 0x40464d, 1.0));
-const key = new THREE.DirectionalLight(0xffffff, 2.4);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x454c57, 1.0));   // --fg / --line-strong（地面反光）
+const key = new THREE.DirectionalLight(0xffffff, 2.4);          // --fg（主光）
 key.position.set(-140, 220, 130);
 key.castShadow = true;
 key.shadow.mapSize.set(2048, 2048);
@@ -193,29 +216,29 @@ key.shadow.camera.left = -220; key.shadow.camera.right = 220;
 key.shadow.camera.top = 300;  key.shadow.camera.bottom = -60;
 key.shadow.camera.far = 800;  key.shadow.bias = -0.0004;
 scene.add(key);
-const fill = new THREE.DirectionalLight(0xd6e0ee, 0.8);
+const fill = new THREE.DirectionalLight(0xffffff, 0.8);         // --fg（补光）
 fill.position.set(150, 90, -120);
 scene.add(fill);
-const rim = new THREE.DirectionalLight(0xffffff, 0.5);
+const rim = new THREE.DirectionalLight(0xffffff, 0.5);          // --fg（轮廓光）
 rim.position.set(0, 80, -200);
 scene.add(rim);
 
 /* 地面（外部系统：纯色路面 + 柔和投影 + 参考网格） */
 const groundMat = new THREE.MeshStandardMaterial({
-  color:0x2b2f35, roughness:0.95, metalness:0.0
+  color:0x2c3138, roughness:0.95, metalness:0.0        // --line-soft（路面）
 });
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), groundMat);
 ground.rotation.x = -Math.PI/2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const grid = new THREE.GridHelper(420, 42, 0x6b727b, 0x4a5058);
+const grid = new THREE.GridHelper(420, 42, 0x7b848f, 0x454c57);   // --fg-mute / --line-strong
 grid.position.y = 0.4;
 grid.material.transparent = true;
 grid.material.opacity = 0.22;
 scene.add(grid);
 
-/* ================= 材质（灰色金属系） ================= */
+/* ================= 材质（灰色金属系，取值全部来自 theme token） ================= */
 function std(color, roughness=0.45, metalness=0.9) {
   return new THREE.MeshStandardMaterial({
     color, roughness, metalness,
@@ -223,26 +246,26 @@ function std(color, roughness=0.45, metalness=0.9) {
   });
 }
 const MAT = {
-  spring:  std(0xa8aeb6, 0.32, 0.95),  // 螺旋弹簧 — 亮钢
-  strut:   std(0xd3d7dc, 0.28, 0.95),  // 减震器筒 — 抛光筒身
-  rod:     std(0xe4e8ec, 0.22, 1.0),   // 活塞杆
-  knuckle: std(0x7f858c, 0.58, 0.85),  // 转向节 — 铸铁
-  arm:     std(0x999fa6, 0.50, 0.85),  // 下控制臂 — 冲压钢
-  bar:     std(0xb9bfc6, 0.34, 0.95),  // 横向稳定杆 — 弹簧钢
-  link:    std(0x8b9198, 0.42, 0.90),  // 连接杆
-  disc:    std(0xc6cbd1, 0.25, 0.95),  // 制动盘/轮毂
-  rubber:  std(0x33373c, 0.85, 0.15),  // 橡胶衬套
-  dark:    std(0x565c63, 0.55, 0.80),  // 安装座/螺栓
-  frame:   std(0x4d535a, 0.62, 0.70),  // 副车架（安装基准，非标注部件）
+  spring:  std(0xa9b2be, 0.32, 0.95),  // 螺旋弹簧 — 亮钢        --fg-dim
+  strut:   std(0xa9b2be, 0.28, 0.95),  // 减震器筒 — 抛光筒身    --fg-dim
+  rod:     std(0xffffff, 0.22, 1.0),   // 活塞杆                 --fg
+  knuckle: std(0x7b848f, 0.58, 0.85),  // 转向节 — 铸铁          --fg-mute
+  arm:     std(0x7b848f, 0.50, 0.85),  // 下控制臂 — 冲压钢      --fg-mute
+  bar:     std(0xa9b2be, 0.34, 0.95),  // 横向稳定杆 — 弹簧钢    --fg-dim
+  link:    std(0x7b848f, 0.42, 0.90),  // 连接杆                 --fg-mute
+  disc:    std(0xa9b2be, 0.25, 0.95),  // 制动盘/轮毂            --fg-dim
+  rubber:  std(0x313741, 0.85, 0.15),  // 橡胶衬套               --panel-3
+  dark:    std(0x454c57, 0.55, 0.80),  // 安装座/螺栓            --line-strong
+  frame:   std(0x363c45, 0.62, 0.70),  // 副车架（安装基准，非标注部件） --line
   /* ---- 外部系统 ---- */
-  tire:    std(0x26292d, 0.92, 0.05),  // 轮胎橡胶
-  rim:     std(0xd2d6db, 0.22, 0.95),  // 轮毂铝合金
-  body:    std(0x73797f, 0.55, 0.75),  // 车身钣金（减震塔/车架）
-  boot:    std(0x2c2f34, 0.90, 0.10),  // 球笼防尘套橡胶
+  tire:    std(0x23272d, 0.92, 0.05),  // 轮胎橡胶               --panel
+  rim:     std(0xa9b2be, 0.22, 0.95),  // 轮毂铝合金             --fg-dim
+  body:    std(0x7b848f, 0.55, 0.75),  // 车身钣金（减震塔/车架）--fg-mute
+  boot:    std(0x2a2f36, 0.90, 0.10),  // 球笼防尘套橡胶         --panel-2
 };
 
 /* 清晰部件轮廓线 */
-const lineMat = new THREE.LineBasicMaterial({ color:0x1b1f24, transparent:true, opacity:0.95 });
+const lineMat = new THREE.LineBasicMaterial({ color:0x141719, transparent:true, opacity:0.95 });   // --bg-deep（部件轮廓线）
 
 /* ================= 工具函数 ================= */
 const V = (x,y,z) => new THREE.Vector3(x,y,z);
@@ -357,7 +380,7 @@ function strutAxis(s) {
 /* ---- 1/6 减震器筒（含活塞杆、顶胶、弹簧座、连杆支架） ----
    内部按运动归属拆为：gW=轮侧（随车轮跳动） gB=车身侧（随车身） */
 function buildStrut(s) {
-  const g = makePart('减震器筒', '#dfe3e8', strutAxis(s).u.multiplyScalar(20));
+  const g = makePart('减震器筒', '#00adb5', strutAxis(s).u.multiplyScalar(20));   // --accent
   const gW = new THREE.Group();  g.add(gW);   // 轮侧：缸筒、下托盘、连杆凸台
   const gB = new THREE.Group();  g.add(gB);   // 车身侧：活塞杆、顶胶、上弹簧座
   const { L, u, at } = strutAxis(s);
@@ -386,7 +409,7 @@ function buildStrut(s) {
 /* ---- 2/6 螺旋弹簧（spRig 沿减震筒轴线，可随行程压缩） ---- */
 function buildSpring(s) {
   const { u, len, at } = strutAxis(s);
-  const g = makePart('螺旋弹簧', '#6ea8fe', u.clone().multiplyScalar(58));
+  const g = makePart('螺旋弹簧', '#4f9cf9', u.clone().multiplyScalar(58));   // --s1
   const a = at(0.315), b = at(0.845);
   const L = a.distanceTo(b);                       // 弹簧自由长度（沿轴）
 
@@ -411,7 +434,7 @@ function buildSpring(s) {
 
 /* ---- 3/6 转向节（羊角，含轮毂、制动盘、转向摇臂） ---- */
 function buildKnuckle(s) {
-  const g = makePart('转向节（羊角）', '#9aa1a9', V(s*44, -16, 0));
+  const g = makePart('转向节（羊角）', '#7b848f', V(s*44, -16, 0));   // --fg-mute
   const W = V(s*82, 42, 0);                          // 轮心
   const { u, at } = strutAxis(s);
 
@@ -454,7 +477,7 @@ function buildKnuckle(s) {
 
 /* ---- 4/6 下控制臂（A/L 型摆臂，含衬套与球头） ---- */
 function buildArm(s, BJ) {
-  const g = makePart('下控制臂', '#aab0b7', V(s*18, -40, 0));
+  const g = makePart('下控制臂', '#a9b2be', V(s*18, -40, 0));   // --fg-dim
   const F = V(s*23, 17, 26);                        // 前衬套
   const R = V(s*23, 14, -24);                       // 后衬套
 
@@ -484,7 +507,7 @@ function buildArm(s, BJ) {
 
 /* ---- 5/6 横向稳定杆（中央杆身固定于副车架，两端臂可绕衬套扭转） ---- */
 function buildSwayBar() {
-  const g = makePart('横向稳定杆', '#c8cdd3', V(0, -44, 0));
+  const g = makePart('横向稳定杆', '#ffffff', V(0, -44, 0));   // --fg
   // 中央杆身（车身侧，静止）
   rod(g, V(-40,20,0), V(40,20,0), 1.9, 1.9, MAT.bar, 16, false);
 
@@ -526,7 +549,7 @@ function buildSwayBar() {
 
 /* ---- 6/6 稳定杆连接杆（竖拉杆，带球头；两端随动） ---- */
 function buildLink(s, barTip, strutLug) {
-  const g = makePart('连接杆', '#878e96', V(0, -14, 34));
+  const g = makePart('连接杆', '#ffb454', V(0, -14, 34));   // --warn
   const main = rod(g, barTip, strutLug, 1.4, 1.4, MAT.link, 16);
   const ballBot = ball(g, barTip, 2.8, MAT.link, 18);
   const ballTop = ball(g, strutLug, 2.8, MAT.link, 18);
@@ -543,7 +566,7 @@ function buildLink(s, barTip, strutLug) {
 
 /* ---- 车轮（spinRig 绕车轴滚动；整体随跳动/转向 rig 运动） ---- */
 function buildWheel(s) {
-  const g = makePart('车轮', '#e0a33e', V(s*95, 0, 0));
+  const g = makePart('车轮', '#f2994a', V(s*95, 0, 0));   // --s2
   const W = V(s*82, 42, 0);                          // 轮心（与转向节同轴）
   const spinRig = new THREE.Group();                 // 滚动子组
   spinRig.position.copy(W);
@@ -580,7 +603,7 @@ function buildWheel(s) {
 
 /* ---- 半轴（传动轴；内端接差速器，外端随车轮） ---- */
 function buildHalfShaft(s) {
-  const g = makePart('半轴（传动轴）', '#74b68a', V(s*60, -12, 0));
+  const g = makePart('半轴（传动轴）', '#2fbf8f', V(s*60, -12, 0));   // --s3
   const inner = V(s*26, 40, 1);                     // 内侧差速器端（车身侧）
   const outer = V(s*78, 42, 0);                     // 外侧轮毂端（轮侧）
   // 轴杆（加粗，两端收进球笼内）
@@ -618,7 +641,7 @@ function buildDifferential() {
 
 /* ---- 转向机与横拉杆（齿条经抱箍安装在副车架上，可轴向滑动） ---- */
 function buildSteering() {
-  const g = makePart('转向机与横拉杆', '#b58ad6', V(0, -20, 38));
+  const g = makePart('转向机与横拉杆', '#c9a6ff', V(0, -20, 38));   // --s5
   const rackRod = rod(g, V(-44,30,33), V(44,30,33), 2.8, 2.8, MAT.dark, 20);
   const rackBox = box(g, V(0,30,33), V(12, 6, 6), MAT.frame);
   // 安装支架：副车架前横梁 → 两根立柱 → 抱箍环（齿条转向时从环中轴向滑过）
@@ -651,7 +674,7 @@ function buildSteering() {
 
 /* ---- 车身（减震塔 + 纵梁/横梁 + 轮拱钣金） ---- */
 function buildBody() {
-  const g = makePart('车身（减震塔/车架）', '#cf8a72', V(0, 80, 0));
+  const g = makePart('车身（减震塔/车架）', '#ff6b6b', V(0, 80, 0));   // --danger
   const panelMat = MAT.body.clone();
   panelMat.side = THREE.DoubleSide;                 // 钣金薄板双面可见
   for (const s of [-1, 1]) {
@@ -784,7 +807,7 @@ for (const m of wheelMecha) {
 }
 
 /* ================= 路面激励（驶过的凸台） ================= */
-const bumpMat = new THREE.MeshStandardMaterial({ color:0x484e56, roughness:0.9, metalness:0.05 });
+const bumpMat = new THREE.MeshStandardMaterial({ color:0x454c57, roughness:0.9, metalness:0.05 });   // --line-strong（路面凸台）
 function makeBump(h, width, xc, phase) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, h, 16), bumpMat);
   mesh.position.set(xc, h/2, 0);
@@ -880,10 +903,10 @@ function makeTraceLine(color, n) {
   scene.add(line);
   return line;
 }
-const groundLineL = makeTraceLine(0xff9f43, TRACE.groundN);
-const groundLineR = makeTraceLine(0xff9f43, TRACE.groundN);
-const y1Line = makeTraceLine(0x2ec4e8, TRACE.N);
-const y2Line = makeTraceLine(0x51cf66, TRACE.N);
+const groundLineL = makeTraceLine(0xf2994a, TRACE.groundN);   // --s2（地面输入 r(t)）
+const groundLineR = makeTraceLine(0xf2994a, TRACE.groundN);   // --s2
+const y1Line = makeTraceLine(0x57e0ff, TRACE.N);              // --accent-2（左支柱顶 y₁(t)）
+const y2Line = makeTraceLine(0x3ddc97, TRACE.N);              // --ok（右支柱顶 y₂(t)）
 /* 世界坐标 (x,z) 处的地面高度（与 roadH 一致的凸台剖面） */
 function groundAt(xWorld, zWorld, travel) {
   let h = 0;
@@ -912,19 +935,19 @@ function drawChart() {
   const sp = Math.max(1e-3, hi - lo); lo -= sp * 0.12; hi += sp * 0.12;
   const X = i => pad + (i / (TRACE.N - 1)) * (W - pad * 2);
   const Y = v => H - pad - ((v - lo) / (hi - lo)) * (H - pad * 2);
-  cctx.strokeStyle = 'rgba(255,255,255,.13)'; cctx.lineWidth = 1;
+  cctx.strokeStyle = '#363c45'; cctx.lineWidth = 1;          // 坐标轴 = --line
   cctx.beginPath(); cctx.moveTo(pad, H - pad); cctx.lineTo(W - pad, H - pad); cctx.stroke();
   cctx.beginPath(); cctx.moveTo(pad, pad); cctx.lineTo(pad, H - pad); cctx.stroke();
-  cctx.strokeStyle = 'rgba(255,255,255,.22)'; cctx.setLineDash([3, 3]);
+  cctx.strokeStyle = '#454c57'; cctx.setLineDash([3, 3]);    // 零线 = --line-strong
   cctx.beginPath(); cctx.moveTo(pad, Y(0)); cctx.lineTo(W - pad, Y(0)); cctx.stroke(); cctx.setLineDash([]);
   const plot = (arr, base, color) => {
     cctx.strokeStyle = color; cctx.lineWidth = 1.6; cctx.beginPath();
     for (let i = 0; i < TRACE.N; i++) { const px = X(i), py = Y(arr[i] - base); if (i === 0) cctx.moveTo(px, py); else cctx.lineTo(px, py); }
     cctx.stroke();
   };
-  if (traceOn.r) plot(TRACE.r, 0, '#ff9f43');
-  if (traceOn.y1) plot(TRACE.y1, TRACE.y1Rest, '#2ec4e8');
-  if (traceOn.y2) plot(TRACE.y2, TRACE.y2Rest, '#51cf66');
+  if (traceOn.r) plot(TRACE.r, 0, '#f2994a');                 // --s2
+  if (traceOn.y1) plot(TRACE.y1, TRACE.y1Rest, '#57e0ff');    // --accent-2
+  if (traceOn.y2) plot(TRACE.y2, TRACE.y2Rest, '#3ddc97');    // --ok
 }
 
 function updateDynamics(dt) {
@@ -1204,9 +1227,9 @@ btnRot.onclick = () => {
 btnTheme.onclick = () => {
   darkTheme = !darkTheme;
   document.body.classList.toggle('light', !darkTheme);
-  scene.background.set(darkTheme ? 0x15181c : 0xe9edf1);
-  groundMat.color.set(darkTheme ? 0x2b2f35 : 0xd6dbe0);
-  bumpMat.color.set(darkTheme ? 0x484e56 : 0xb7bdc4);
+  scene.background.set(darkTheme ? 0x1a1d21 : 0xffffff);   // --bg / --fg（浅色底）
+  groundMat.color.set(darkTheme ? 0x2c3138 : 0xa9b2be);    // --line-soft / --fg-dim（浅色路面）
+  bumpMat.color.set(darkTheme ? 0x454c57 : 0x7b848f);      // --line-strong / --fg-mute
   grid.material.opacity = darkTheme ? 0.22 : 0.30;
   btnTheme.textContent = darkTheme ? '浅色主题' : '深色主题';
 };
@@ -1263,7 +1286,7 @@ renderer.domElement.addEventListener('pointerup', e => {
 
 /* ================= 渲染循环 ================= */
 const clock = new THREE.Clock();
-const flashColor = new THREE.Color(0x2f6fd0);
+const flashColor = new THREE.Color(0x00adb5);   // --accent（选中高亮）
 
 function animate() {
   requestAnimationFrame(animate);

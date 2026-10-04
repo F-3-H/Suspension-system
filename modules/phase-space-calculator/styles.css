@@ -1,0 +1,305 @@
+/* 相空间可视化计算器 —— 仪器面板风格：深色底，颜色只用来编码物理量 */
+:root {
+  /* 与 ../../assets/theme.css 同值的一份兜底：共享主题先加载，两者取值相同；
+     这一份的作用是"把本项目目录单独拷走也能双击运行"（见 STYLE.md 第五节）。
+     改动配色请两边一起改，tools/verify-repo-style.cjs 会检查是否同步。 */
+  --bg: #1a1d21;      --bg-deep: #141719;
+  --panel: #23272d;   --panel-2: #2a2f36;   --panel-3: #313741;
+  --line: #363c45;    --line-soft: #2c3138; --line-strong: #454c57;
+  --fg: #ffffff;      --fg-dim: #a9b2be;    --fg-mute: #7b848f;
+  --accent: #00adb5;  --accent-2: #57e0ff;
+  --accent-soft: rgba(0,173,181,.16);
+  --accent-line: rgba(0,173,181,.45);
+  --ok: #3ddc97;      --warn: #ffb454;      --danger: #ff6b6b;
+  --s1: #4f9cf9; --s2: #f2994a; --s3: #2fbf8f; --s4: #ef5350; --s5: #c9a6ff;
+  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "SFMono-Regular", "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 ui-sans-serif, system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+  overflow: hidden;
+  /* 顶栏可换行 → 用 flex 纵向排布，主区自动吃剩余高度（不再写死 calc(100% - 62px)） */
+  display: flex; flex-direction: column;
+}
+#fatal {
+  display: none; position: fixed; z-index: 99; left: 0; right: 0; top: 0;
+  background: rgba(255,107,107,.92); color: var(--bg); padding: 8px 12px; font-family: ui-monospace, monospace;
+}
+code { background: var(--panel-2); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+
+/* ---------------------------------------------------------------- 顶栏（统一外壳） */
+/* #topbar 同时带 .sitebar 类（家族顶栏）：品牌/面包屑/右上信息都来自 ../../assets/theme.css，
+   这里只保留本应用更紧凑的间距与换行行为（id 选择器优先，故仍以本文件为准） */
+#topbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 7px 14px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(35,39,45,.96), rgba(26,29,33,.94));
+  flex: 0 0 auto;               /* 高度随内容（窄窗口下换行），不再写死 62px */
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { font-size: 15px; margin: 0; letter-spacing: .5px; font-weight: 650; }
+.brand .sub { margin: 0; font-size: 11px; color: var(--fg-dim); }
+.pulse {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(87,224,255,.7); animation: pulse 2.4s infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(87,224,255,.6); }
+  70% { box-shadow: 0 0 0 12px rgba(87,224,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(87,224,255,0); }
+}
+.dims { display: flex; gap: 4px; margin-left: 8px; flex-wrap: wrap; }
+.dims button {
+  background: var(--panel-2); color: var(--fg-dim); border: 1px solid var(--line-strong);
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  white-space: nowrap;          /* 窄窗口下按钮文字竖排成一个字一列，太难认 */
+}
+.dims button.active {
+  background: var(--accent-soft); color: var(--fg); border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(87,224,255,.25) inset;
+}
+.dims button:hover { color: #fff; }
+.sel { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-dim); white-space: nowrap; }
+.sel select, .mini select {
+  background: var(--panel-2); color: var(--fg); border: 1px solid var(--line-strong);
+  border-radius: 5px; padding: 5px 6px; font-size: 12px;
+}
+.dimnote { margin-left: auto; font-size: 12px; color: var(--fg-dim); }
+.dimnote b { color: var(--accent-2); }
+
+/* ---------------------------------------------------------------- 主体三栏 */
+main {
+  /* 窄屏时两侧栏收窄，让中间那张图活下来；minmax(0,1fr) 允许中栏收缩，
+     否则 1024px 宽的屏上三栏总宽超了，右栏会被挤到屏幕外（这也是"看不全"的一种） */
+  display: grid;
+  grid-template-columns: clamp(240px, 22vw, 322px) minmax(0, 1fr) clamp(238px, 24vw, 336px);
+  flex: 1 1 auto; min-height: 0;      /* 顶栏换行后，主区自动吃剩下的高度 */
+}
+aside { overflow-y: auto; padding: 10px 12px 30px; background: var(--panel); }
+#left { border-right: 1px solid var(--line); }
+#right { border-left: 1px solid var(--line); }
+aside h2 {
+  font-size: 12px; text-transform: none; letter-spacing: .3px; color: var(--fg-dim);
+  margin: 14px 0 6px; font-weight: 650; display: flex; align-items: baseline; gap: 6px;
+}
+aside h2:first-child { margin-top: 4px; }
+.hint { color: var(--fg-mute); font-weight: 400; font-size: 11px; }
+.muted { color: var(--fg-mute); font-size: 11px; }
+
+/* 编辑器 */
+#editor {
+  width: 100%; height: 168px; resize: vertical;
+  background: var(--bg-deep); color: var(--fg); border: 1px solid var(--line-strong); border-radius: 6px;
+  font: 12.5px/1.7 ui-monospace, Consolas, "Cascadia Mono", monospace;
+  padding: 8px 9px; outline: none; white-space: pre; overflow: auto;
+}
+#editor:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(87,224,255,.12); }
+.errors { display: none; margin: 6px 0 0; border-left: 3px solid var(--danger); background: #ffffff; padding: 6px 8px; border-radius: 4px; }
+.errors.show { display: block; }
+.errtitle { color: var(--danger); font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+.errline { color: #ffffff; font-size: 11.5px; margin: 2px 0; }
+.errline .pos { color: #ffffff; font-family: ui-monospace, monospace; margin-right: 5px; }
+
+.btnrow { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+button {
+  background: var(--panel-2); color: var(--fg); border: 1px solid var(--line-strong);
+  border-radius: 6px; padding: 6px 11px; cursor: pointer; font-size: 12px;
+}
+button:hover { border-color: var(--line-strong); color: #fff; }
+button.primary { background: var(--accent-line); border-color: var(--accent); color: var(--fg); }
+button.primary.on { background: rgba(61,220,151,.35); border-color: var(--ok); }
+button.ghost { background: transparent; color: var(--fg-dim); }
+button:disabled { opacity: .5; cursor: default; }
+
+/* 参数滑杆 */
+.params { display: flex; flex-direction: column; gap: 5px; }
+.prow { display: grid; grid-template-columns: 62px 1fr 62px; gap: 6px; align-items: center; }
+.prow label { font-family: ui-monospace, monospace; font-size: 12px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; }
+.prow input[type=range] { width: 100%; accent-color: var(--accent); }
+.prow input[type=number] {
+  width: 100%; background: var(--bg-deep); border: 1px solid var(--line-strong); color: var(--fg);
+  border-radius: 4px; padding: 3px 5px; font: 11.5px ui-monospace, monospace;
+}
+.help { margin: 0; padding-left: 18px; color: var(--fg-dim); font-size: 11.8px; }
+.help li { margin: 3px 0; }
+.help b { color: var(--accent-2); }
+
+/* ---------------------------------------------------------------- 中栏 */
+/* 这一栏的高度是"窗口高度减去顶栏"，所以它必须能**收缩**：
+   body 是 overflow:hidden，一旦内容总高超过可视区，底部会被静默裁掉。
+   人系统报障"下面的坐标图看不见"就是这个原因：舞台 min-height:240 不让步、
+   副图固定 168、canvas 的 min-height:auto 又按内容（height 属性）撑住不肯缩，
+   于是副图连同相流条一起被推到窗口之外。
+   修法：允许收缩（min-height:0 解掉 flex 的自动最小尺寸），用 clamp() 让副图
+   随窗口高度自适应，并给整栏加 overflow:hidden 兜底。 */
+/* overflow-y:auto 而不是 hidden：万一窗口小到装不下（顶栏换行、控制条多行），
+   内容可以滚动看到，而不是被静默裁掉 —— "看不见"这类故障宁可给人一条滚动条 */
+#center { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; background: var(--bg-deep); }
+#playbar {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding: 6px 10px; border-bottom: 1px solid var(--line); background: var(--panel-2);
+}
+.mini { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--fg-dim); }
+.mini input[type=range] { width: 76px; accent-color: var(--accent-2); }
+.mini.chk input { accent-color: var(--accent); }
+#speedVal, #horizonVal { font-family: ui-monospace, monospace; color: var(--fg); min-width: 42px; }
+
+/* 相图区：让位优先级最低的一块 —— 底部两块子图拿不到高度时，被压扁的是它 */
+#stage { position: relative; flex: 1 1 auto; min-height: 90px; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+#inset {
+  position: absolute; left: 10px; top: 10px; width: 208px;
+  background: rgba(8,12,16,.88); border: 1px solid var(--line-strong); border-radius: 8px;
+  padding: 6px 8px 8px; pointer-events: none;
+  max-width: calc(100% - 20px);
+}
+/* 示意图只占一小块；方程回显已经搬到左栏（它原来浮在这里，把相图挡住了） */
+#schematic { width: 100%; height: 86px; display: block; }
+/* 方程预览（左栏内） */
+.eqpreview { border: 1px solid var(--line); border-radius: 6px; background: var(--bg-deep); padding: 6px 8px 8px; margin-top: 8px; }
+.eqhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.eqtitle { font-size: 11.5px; color: var(--fg-dim); }
+#insetEq { font: 14px/1.6 "Cambria Math", "Times New Roman", ui-serif, serif; color: var(--fg); margin-top: 4px; }
+#insetEq.long { font-size: 12px; }
+.eqline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; margin: 3px 0; }
+.eqline .lhs { font-style: italic; color: var(--accent-2); white-space: nowrap; }
+/* 时间导数的点号：用绝对定位画在字母上方，而不是靠 Unicode 组合点
+   （组合点在部分字体里会飘位；v、θ、ω 也没有预组合字符可用） */
+.dv { position: relative; font-style: italic; white-space: nowrap; }
+.dvdot, .dvdot2 {
+  position: absolute; left: 0; right: 0; text-align: center;
+  top: -0.78em; font-style: normal; font-size: .95em; line-height: 1; letter-spacing: .04em;
+}
+.eqline .rhs { overflow-wrap: anywhere; min-width: 0; }
+.eqline.so { border-left: 2px solid rgba(125,251,160,0.5); padding-left: 6px; margin-top: 5px; }
+.tagso { font-size: 9.5px; color: var(--ok); border: 1px solid rgba(125,251,160,0.35); border-radius: 3px; padding: 0 3px; }
+.eqparams { font-size: 10.5px; color: var(--fg-mute); margin-top: 4px; }
+.eqparams.rand { color: var(--accent-2); }
+/* 书写工具盘：分组、紧凑、可换行 */
+.palette { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.palgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.pallabel {
+  font-size: 10.5px; color: var(--fg-mute); min-width: 52px; flex: 0 0 auto;
+  border-right: 1px solid var(--line); padding-right: 5px; margin-right: 2px;
+}
+.palhint { font-size: 10px; color: var(--fg-mute); margin-left: 4px; }
+.palhint code { color: var(--fg-mute); }
+.palette .sym {
+  padding: 2px 7px; font-size: 12px; border-radius: 4px; line-height: 1.4;
+  background: var(--panel-2); color: var(--fg-dim); border: 1px solid var(--line-strong); cursor: pointer;
+}
+.palette .sym:hover { color: #fff; border-color: var(--line-strong); background: var(--panel-2); }
+.palette .tpl {
+  background: var(--panel-2); color: var(--fg); border: 1px solid var(--line-strong);
+  border-radius: 5px; padding: 3px 5px; font-size: 12px; max-width: 210px;
+}
+#editor { min-height: 148px; }
+/* 随机外因模式的控制面板 */
+.mcpanel { display: none; }
+.mcpanel.show { display: block; }
+.mcpanel .prow { grid-template-columns: 62px 1fr 62px; }
+.mcpanel select.wide {
+  grid-column: 2 / 4; background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--line-strong); border-radius: 5px; padding: 3px 5px; font-size: 12px;
+}
+.mcpanel .val { font-family: ui-monospace, monospace; color: var(--fg); font-size: 11.5px; }
+.mcnote {
+  font-size: 11.5px; color: var(--fg-dim); background: var(--bg-deep);
+  border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px; margin-top: 6px;
+}
+#legend { position: absolute; right: 12px; top: 12px; width: 132px; height: 36px; pointer-events: none; }
+/* 底部两块子图**并排**：时间序列与功率谱各占一半宽度。
+   以前是上下叠放，随机模式一开就多出 96–160px，纵向总高再次超出窗口、底部被裁掉
+   —— 和人系统报障的那次"副图看不见"是同一类错误，这次拿宽度换高度。 */
+#bottomPlots {
+  /* 可以缩，但有下限：低到 84px 就该轮到相图和操作条让位，而不是把子图顶到窗口外面去 */
+  flex: 0 1 auto;
+  display: flex; flex-direction: row;
+  height: clamp(120px, 22vh, 190px);
+  min-height: 84px;
+  border-top: 1px solid var(--line);
+}
+#seriesWrap {
+  flex: 1 1 0; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+}
+#psdWrap {
+  flex: 1 1 0; min-width: 0; min-height: 0;
+  border-left: 1px solid var(--line);
+  display: none; flex-direction: column;
+}
+#psdWrap.show { display: flex; }
+/* 标题单行不换行：两块子图并排时，标题行数不同会把两块画布错开十几像素 */
+.seriesTitle {
+  font-size: 11px; color: var(--fg-dim); padding: 4px 10px 0; flex: 0 0 auto;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#series, #psd { flex: 1 1 auto; min-height: 0; width: 100%; display: block; }
+#flowbar {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  padding: 5px 10px; border-top: 1px solid var(--line); background: var(--panel-2);
+  font-size: 11.5px; color: var(--fg-dim);
+}
+/* 窗口很矮时：先撤掉说明条与子图标题，把高度让给两块子图本体，
+   相图区接受被压到 90px —— 顺序是"相图与操作条让位于读数"，不是"读数被裁掉" */
+@media (max-height: 620px) {
+  #flowbar { display: none; }
+  .seriesTitle { display: none; }
+  #bottomPlots { height: 104px; min-height: 84px; }
+  #schematic { height: 62px; }
+  #stage { min-height: 84px; }
+  #playbar { padding: 5px 8px; gap: 6px 8px; }
+  #playbar .btnrow { gap: 4px; }
+  .palhint { display: none; }
+  #editor { min-height: 108px; }
+}
+/* 更矮时，操作条改成"一行 + 横向滚动"：它是最能压缩的一块（3–4 行要吃掉 120px 以上），
+   而子图是读数，宁可让操作条横着滚，也不让子图掉到窗口外面去 */
+@media (max-height: 560px) {
+  #playbar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding: 4px 8px; }
+  #playbar > * { flex: 0 0 auto; }
+  #bottomPlots { height: 96px; min-height: 84px; }
+}
+/* 窄窗口下把两侧栏再收一点，把宽度让给相图与子图 */
+@media (max-width: 1180px) {
+  main { grid-template-columns: clamp(212px, 20vw, 322px) minmax(0, 1fr) clamp(210px, 21vw, 336px); }
+  .seriesTitle { font-size: 10.5px; }
+}
+@media (max-width: 1100px) { #inset { width: 176px; } }
+/* 相图本身已经很矮时，示意图直接让位：它是装饰，空间不够就不画（"看不见"比"挤掉正图"可接受） */
+@media (max-height: 520px) { #inset { display: none; } }
+
+/* ---------------------------------------------------------------- 右栏 */
+.readout { display: flex; flex-direction: column; gap: 3px; }
+.row {
+  display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+  background: var(--bg-deep); border: 1px solid var(--line); border-radius: 5px; padding: 4px 7px;
+}
+.row > span { color: var(--fg-dim); font-size: 11.5px; }
+.row > b { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--fg); text-align: right; }
+.tag {
+  font-size: 10.5px; padding: 1px 5px; border-radius: 3px; background: var(--panel-2); color: var(--fg-dim);
+  border: 1px solid var(--line-strong);
+}
+.tag.ok { color: var(--ok); border-color: rgba(61,220,151,.45); }
+.tag.warn { color: var(--warn); border-color: rgba(255,180,84,.45); }
+.structure { display: flex; flex-direction: column; gap: 5px; }
+.eqitem {
+  background: var(--bg-deep); border: 1px solid var(--line); border-radius: 5px; padding: 5px 7px;
+  font-size: 11.8px;
+}
+.eqitem b { font-family: ui-monospace, monospace; color: var(--fg); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.dot.stable { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.dot.unstable { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.dot.neutral { background: var(--warn); }
+.note { font-size: 12px; color: var(--fg-dim); background: var(--bg-deep); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+.note b { color: var(--accent-2); }
+.legendText { font-size: 11.8px; color: var(--fg-dim); }
+.legendText p { margin: 5px 0; }
+.legendText b { color: var(--fg); }
