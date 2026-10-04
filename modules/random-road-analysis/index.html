@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>悬挂系统随机路面分析 · 互动可视化 · 汽车悬挂系统可视化项目</title>
+<link rel="stylesheet" href="../../assets/theme.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+
+  <header class="sitebar topbar">
+    <a class="brand" href="../../index.html" title="回到导航页">汽车悬挂系统</a>
+    <span class="crumb">VIEW 05 · <b>悬挂系统随机路面分析</b></span>
+    <span class="spacer"></span>
+    <span class="tag tag--ghost">Canvas · 零依赖 · 双击可用</span>
+  </header>
+
+  <div class="chainbar">
+    <div class="chain">
+      <span class="step">随机路面 x(t)</span>
+      <i>→</i>
+      <span class="step">频率占比（傅里叶）</span>
+      <i>→</i>
+      <span class="step">内因响应 |H(f)|</span>
+      <i>→</i>
+      <span class="step">综合影响 S<sub>y</sub>(f)</span>
+      <i>→</i>
+      <span class="step">指导内外因改进</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <aside class="panel controls">
+      <h2 class="panel-title">参数</h2>
+
+      <div class="ctl-group">
+        <h3>外因 · 随机路面 x(t)</h3>
+        <label><span>路面等级（ISO 8601）</span>
+          <select id="selClass">
+            <option value="A">A 级（高速 / 很平）</option>
+            <option value="B">B 级（平整）</option>
+            <option value="C" selected>C 级（一般公路）</option>
+            <option value="D">D 级（较差）</option>
+            <option value="E">E 级（很差）</option>
+            <option value="F">F 级（越野）</option>
+            <option value="G">G 级（极差）</option>
+            <option value="H">H 级（极限）</option>
+          </select>
+        </label>
+        <label><span>车速 <b id="valSpeed">72</b> km/h</span>
+          <input type="range" id="rngSpeed" min="10" max="120" step="1" value="72" />
+        </label>
+        <label><span>空间频率指数 w = <b id="valW">2.00</b></span>
+          <input type="range" id="rngW" min="1.6" max="2.6" step="0.05" value="2" />
+        </label>
+        <label><span>随机种子</span>
+          <div class="seedline">
+            <input type="number" id="inpSeed" value="20261004" />
+            <button id="btnSeed" class="mini" title="换一条随机路面">换一条</button>
+          </div>
+        </label>
+      </div>
+
+      <div class="ctl-group">
+        <h3>内因 · 悬挂系统（1 自由度）</h3>
+        <label><span>簧上质量 m = <b id="valM">300</b> kg</span>
+          <input type="range" id="rngM" min="150" max="600" step="5" value="300" />
+        </label>
+        <label><span>阻尼系数 c = <b id="valC">1500</b> N·s/m</span>
+          <input type="range" id="rngC" min="200" max="6000" step="20" value="1500" />
+        </label>
+        <label><span>弹簧刚度 k = <b id="valK">20000</b> N/m</span>
+          <input type="range" id="rngK" min="8000" max="60000" step="250" value="20000" />
+        </label>
+        <div class="derived">
+          <div>固有频率 f<sub>n</sub> <b id="outFn">–</b></div>
+          <div>阻尼比 ζ <b id="outZeta">–</b></div>
+        </div>
+      </div>
+
+      <div class="ctl-group">
+        <h3>优化约束</h3>
+        <label><span>允许行程（RMS）<b id="valTravel">3.0</b> cm</span>
+          <input type="range" id="rngTravel" min="1" max="8" step="0.5" value="3" />
+        </label>
+        <button id="btnOptimize" class="primary">自动优化内因 (c, k)</button>
+        <button id="btnReset" class="ghost">重置参数</button>
+      </div>
+
+      <p class="note">
+        依据《工控论——悬挂系统内因篇》《工控论——相空间与功率谱密度》的思路建立：
+        随机路面的<em>变</em>中取<em>不变</em>的频率构成，再以内因响应衡量其对系统的影响。
+        模型为 1 自由度简化模型（与内因篇一致），分析频带 0.1–25 Hz，加速度为未计权 RMS。
+      </p>
+    </aside>
+
+    <main class="panels">
+
+      <section class="panel span-2">
+        <h2 class="panel-title">① 随机路面 x(t) 与车身 y(t) <span class="tag">外因输入</span></h2>
+        <p class="cap">x(t) 时域完全随机（“变”）；y(t) 明显小于 x(t)，中高频被内因隔离。<span id="capRatio"></span></p>
+        <canvas id="cvRoad" class="chart tall"></canvas>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">② 频率占比图 <span class="tag">变中的不变</span></h2>
+        <p class="cap">对 x(t) 做功率谱密度（Welch 统计）：曲线为各频率能量密度，柱状为频段能量占比 = ∫S<sub>x</sub>df / 总能量。<b>等级只把总能量等比放大，各频段占比按定义不变</b>——柱状不动是正确结果（“变中的不变”）；<em>电平</em>的变化看曲线相对红色 C 级参考谱的整体升降。<span id="capPsd"></span></p>
+        <canvas id="cvPSD" class="chart"></canvas>
+        <canvas id="cvPSDBars" class="chart short"></canvas>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">③ 悬挂内因响应 |H(f)| <span class="tag">内因</span></h2>
+        <p class="cap">同一路面下，内因决定它对哪些频率敏感（共振峰在 f<sub>n</sub>）。</p>
+        <canvas id="cvH" class="chart"></canvas>
+      </section>
+
+      <section class="panel span-2">
+        <h2 class="panel-title">④ 综合影响：S<sub>out</sub>(f) = |H(f)|² · S<sub>x</sub>(f) <span class="tag">影响有多大</span></h2>
+        <p class="cap">把“路面有多少该频率”和“系统对它的敏感度”相乘，才是真正的影响；柱状为各频段的影响占比 = ∫S<sub>a</sub>df / 总能量，<b>带宽就是权重</b>——所以最宽的高频段占比可以最大，尽管它的谱密度最低（见上方曲线）。<b>影响占比与等级无关</b>：等级是公共因子，被占比约掉。<span id="capOut"></span></p>
+        <canvas id="cvOut" class="chart tall"></canvas>
+        <canvas id="cvOutBars" class="chart short"></canvas>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">⑤ 相空间概率云 (y, ẏ) <span class="tag">随机中的稳定</span></h2>
+        <p class="cap">N 条随机路面下重复演化：云越宽越颠簸，云越高震动越快。</p>
+        <canvas id="cvPhase" class="chart"></canvas>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">⑥ 路面等级 → 影响 <span class="tag">外因扫描</span></h2>
+        <p class="cap">固定内因（m、c、k）逐级换路：σ<sub>a</sub> 随 ISO 等级单调上升，纵轴为对数（A→H 跨 128 倍）。红色竖线为当前等级。</p>
+        <canvas id="cvClasses" class="chart"></canvas>
+      </section>
+
+      <section class="panel span-2">
+        <h2 class="panel-title">⑦ 指标与内外因改进 <span class="tag">指导</span></h2>
+        <div class="metrics">
+          <div class="metric"><span>路面 RMS 高程 σ<sub>x</sub></span><b id="mSigmaX">–</b></div>
+          <div class="metric"><span>车身 RMS 位移 σ<sub>y</sub></span><b id="mSigmaY">–</b></div>
+          <div class="metric"><span>车身 RMS 加速度 σ<sub>a</sub></span><b id="mSigmaA">–</b></div>
+          <div class="metric"><span>峰值行程 3σ<sub>y</sub></span><b id="mTravel">–</b></div>
+          <div class="metric"><span>路面主频带</span><b id="mDomBand">–</b></div>
+          <div class="metric"><span>共振重叠度</span><b id="mReso">–</b></div>
+        </div>
+        <div id="advice" class="advice"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 五个视角，一套悬挂</footer>
+</div>
+
+<script src="src/fft.js"></script>
+<script src="src/road.js"></script>
+<script src="src/model.js"></script>
+<script src="src/plot.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

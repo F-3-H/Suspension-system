@@ -21,7 +21,7 @@
   <a class="brand" href="index.html">汽车悬挂系统</a>
   <span class="crumb">综合可视化项目 · <b>导航首页</b></span>
   <span class="spacer"></span>
-  <span class="tag tag--ghost">4 个视角 · 一套悬挂</span>
+  <span class="tag tag--ghost">5 个视角 · 一套悬挂</span>
 </header>
 
 <div class="wrap">
@@ -29,8 +29,8 @@
     <span class="eyebrow">SUSPENSION SYSTEM</span>
     <h1>汽车悬挂系统 · 综合可视化项目</h1>
     <p class="lede">
-      本项目汇集四个独立视角的可视化页面，从<strong>结构几何</strong>、<strong>控制理论</strong>、<strong>振动特性</strong>
-      与<strong>相空间</strong>四个层面观察同一套汽车悬挂系统。点击下方任意卡片进入对应模块。
+      本项目汇集五个独立视角的可视化页面，从<strong>结构几何</strong>、<strong>控制理论</strong>、<strong>振动特性</strong>、
+      <strong>相空间</strong>与<strong>随机振动</strong>五个层面观察同一套汽车悬挂系统。点击下方任意卡片进入对应模块。
     </p>
   </header>
 
@@ -82,6 +82,20 @@
       </div>
     </a>
 
+    <a class="card" href="modules/random-road-analysis/index.html">
+      <div class="idx">VIEW 05</div>
+      <h2>悬挂系统随机路面分析</h2>
+      <p>把随机路面当外因：先用 Welch 功率谱从随机高程中取出“变中的不变”——各频率的能量构成，
+         再用悬挂内因的频率响应 |H(f)| 加权，得到真正的影响谱与各频段占比；另有相空间概率云、
+         ISO 等级扫描，以及由内因/外因两侧给出的改进建议。</p>
+      <div class="tags">
+        <span class="tag">Canvas</span>
+        <span class="tag">零依赖 · 双击可用</span>
+        <span class="tag">随机振动 / PSD</span>
+        <span class="tag">7 面板联动</span>
+      </div>
+    </a>
+
   </div>
 
   <section class="notes">
@@ -94,26 +108,27 @@
         <li><code>modules/suspension-control-lab.html</code></li>
         <li><code>modules/spring-tire-vibration.html</code></li>
         <li><code>modules/phase-space-calculator/</code> — 多文件项目</li>
+        <li><code>modules/random-road-analysis/</code> — 多文件项目</li>
       </ul>
     </div>
     <div>
       <h3>运行方式</h3>
-      <p>四个模块都是静态页面：<strong>VIEW 03 / 04 双击即可打开</strong>（VIEW 04 完全离线自足）；
+      <p>五个模块都是静态页面：<strong>VIEW 03 / 04 / 05 双击即可打开</strong>（VIEW 04 / 05 完全离线自足）；
       VIEW 01 / 02 依赖 CDN，需要通过 <code>http</code> 协议访问，可在本目录启动任意静态服务器后浏览。</p>
     </div>
     <div>
       <h3>外部依赖</h3>
       <p>VIEW 01 依赖 three.js（jsDelivr）、VIEW 02 依赖 Plotly.js（cdn.plot.ly），首次访问需联网；
-      VIEW 03 与 VIEW 04 无任何外部依赖。</p>
+      VIEW 03、VIEW 04 与 VIEW 05 无任何外部依赖。</p>
     </div>
     <div>
       <h3>风格约定</h3>
-      <p>四个模块共用 <a href="STYLE.md">STYLE.md</a> 与 <code>assets/theme.css</code>：同一套配色、字体、圆角与页面外壳，
+      <p>五个模块共用 <a href="STYLE.md">STYLE.md</a> 与 <code>assets/theme.css</code>：同一套配色、字体、圆角与页面外壳，
       各页面只差布局。新增模块请照此接入。</p>
     </div>
   </section>
 
-  <footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 四个视角，一套悬挂</footer>
+  <footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 五个视角，一套悬挂</footer>
 </div>
 </body>
 </html>
