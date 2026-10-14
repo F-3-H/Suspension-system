@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>零件网络 · 现实悬挂系统的发展 | 汽车悬挂系统</title>
+<link rel="stylesheet" href="../assets/theme.css">
+<style>
+  /* 配色、字体、圆角一律来自 ../assets/theme.css（唯一的配色来源）；本页只写"摆在哪里"。 */
+  body{padding:26px 0 0}
+  .wrap{max-width:1180px}
+  h1{font-size:clamp(20px,2.4vw,26px)}
+
+  .lede{margin:0 0 12px}
+  .legend{margin:0 0 12px}
+  .legend i{display:inline-block;width:26px;height:3px;border-radius:2px;margin-right:6px;
+            vertical-align:middle;background:var(--s1)}
+  .legend .d2 i{background:var(--accent)}
+  .legend .d3 i{background:linear-gradient(90deg,var(--ok),var(--danger))}
+  .legend .d4{padding-left:24px;position:relative}
+  .legend .d4 i{display:none}
+  .legend .d4::before{content:"";position:absolute;left:6px;top:2px;width:0;height:0;
+    border-left:5px solid transparent;border-right:5px solid transparent;
+    border-bottom:7px solid var(--fg-mute)}
+
+  svg{width:100%;height:auto;display:block;background:var(--bg-deep);
+      border:1px solid var(--line);border-radius:var(--radius)}
+  .flow{stroke-dasharray:9 12;stroke-linecap:round;animation:fl 1s linear infinite}
+  @keyframes fl{from{stroke-dashoffset:0}to{stroke-dashoffset:-21}}
+  @media (prefers-reduced-motion:reduce){ .flow{animation:none} }
+
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 6px}
+  #time{flex:1;min-width:220px}
+  .tick{font-variant-numeric:tabular-nums;color:var(--fg-dim);font-size:12px;min-width:96px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0 4px}
+  .stat-card{background:var(--panel);border:1px solid var(--line);
+             border-radius:var(--radius-sm);padding:10px 14px}
+  .stat-card .k{font-size:11.5px;color:var(--fg-mute);margin-bottom:4px}
+  .stat-card .n{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat-card .u{font-size:11.5px;color:var(--fg-dim);margin-left:3px}
+
+  .hint{margin-top:14px;font-size:12.5px;color:var(--fg-dim);line-height:1.85;
+        border-left:2px solid var(--accent);padding-left:12px;min-height:56px}
+  .hint b{color:var(--fg);font-weight:600}
+
+  details{margin-top:18px;border:1px solid var(--line);border-radius:var(--radius-sm);
+          background:var(--panel);padding:12px 16px}
+  summary{cursor:pointer;font-size:13px;color:var(--accent)}
+  details p,details li{font-size:12.5px;color:var(--fg-dim);line-height:1.9}
+  .formula{margin:10px 0;padding:10px 14px;background:var(--panel-2);border-radius:var(--radius-xs);
+           font-family:var(--font-mono);font-size:12.5px;color:var(--fg);line-height:2}
+  table.tb{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  table.tb th,table.tb td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;
+                          color:var(--fg-dim)}
+  table.tb th{color:var(--fg-mute);font-weight:500}
+  table.tb td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+</style>
+</head>
+<body>
+<header class="sitebar">
+  <a class="brand" href="../index.html">汽车悬挂系统</a>
+  <span class="crumb">VIEW 06 · <b>零件网络 · 现实悬挂系统的发展</b></span>
+  <span class="spacer"></span>
+  <span class="tag tag--ghost">SVG · 零依赖</span>
+</header>
+
+<div class="wrap">
+  <h1>悬挂系统零件网络：慢的外因，怎样把整套零件一个个改掉</h1>
+  <p class="lede">
+    方块＝零件（整套麦弗逊前悬挂），方块里的数字＝这件零件自己的标志性参数。<br>
+    箭头＝作用，箭头上流动的快慢＝作用的大小，箭头上的数字＝这一次作用有多大。<br>
+    <strong>时间一走，变化就发生在方块自己身上</strong>：数字一边动，颜色一边由绿转红。
+  </p>
+  <div class="legend">
+    <span><i></i>向右 / 向下的一侧作用</span>
+    <span class="d2"><i></i>向左 / 向上的一侧作用（反作用）</span>
+    <span class="d3"><i></i>方块颜色＝这件零件的健康（绿→红）</span>
+    <span class="d4"><i></i>▲ ＝ 方块里那个数字随时间往上走（▼ 则往下）</span>
+  </div>
+
+  <svg id="svg" viewBox="0 0 1140 800" role="img"
+       aria-label="悬挂系统零件网络：零件为方块、作用为流动箭头、时间使方块内的数字与颜色变化"></svg>
+
+  <div class="bar">
+    <button class="btn btn--primary" id="play">▶ 播放</button>
+    <input id="time" type="range" min="0" max="8" step="0.05" value="0" aria-label="时间（年）">
+    <span class="tick" id="tick">第 0.0 年</span>
+    <button class="btn" id="reset">↺ 复位</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="hint" id="hint"></div>
+
+  <details>
+    <summary>这张图里的数字是怎么算出来的（可复算，与 tools/gen_parts_state.py 逐点对过）</summary>
+    <p>四分之一车模型，只看簧上共振这个最烈工况：路面激励幅值 <code>X = 0.05 m</code>，
+       作用频率取当前固有频率 <code>ωn = √(k_eff/m)</code>，簧载质量 <code>m = 300 kg</code>。</p>
+    <div class="formula">
+      弹簧支路等效刚度 k_eff = 1 / (1/k_弹簧 + 1/k_顶胶)<br>
+      相对位移幅值 A = X·√(k_eff·m) / c　　弹簧力 Fk = k_eff·A　　阻尼力 Fc = c·ωn·A<br>
+      总成合力 Fs = √(Fk² + Fc²)（＝传到车身的动态轮荷）　　每周期耗散 W = π·c·ωn·A²<br>
+      下控制臂支路 F_arm = 0.45·Fs　　横向稳定杆 F_bar = 0.30·F_arm（示意的几何分担系数）
+    </div>
+    <p>退化就是"慢的外因经由零件自己的内因起作用"：单位时间内，零件坏多少，取决于它自己承受着多大的作用。</p>
+    <div class="formula">dh/dt = −λ · (驱动 / 驱动₀)</div>
+    <p>弹簧、顶胶、衬套、球头、转向节、稳定杆、副车架、车身：驱动＝<b>行程幅值 A</b>；
+       减震器：驱动＝它自己<b>耗散的功率 W</b>；轮毂轴承：驱动＝<b>累计里程</b>。
+       各 λ 由"8 年后的健康度"反解（迭代求得，页面自己算）。</p>
+    <p><b>关键在这里</b>：A 与 W 都出现在 k_eff、c 的式子里，而 k_eff、c 又由零件决定——
+       一件坏，另一件的驱动就变大，于是互相推着坏。所以年份越靠后，同样一年掉得越多。</p>
+    <p>本项目的 <code>tools/gen_parts_state.py</code> 用 Python 独立算了一遍同样的式子，
+       页面上这组数字与它 0–8 年逐年比对过。
+       <b>数字是示意的粗糙模型，量级取自真实减震器与弹簧，不是实测值。</b></p>
+    <table class="tb">
+      <thead><tr><th>零件</th><th>标志性参数</th><th style="text-align:right">新件</th>
+        <th style="text-align:right">8 年</th><th>为什么变</th></tr></thead>
+      <tbody id="tbl"></tbody>
+    </table>
+  </details>
+
+  <footer class="site-foot">汽车悬挂系统 · 综合可视化项目 &nbsp;|&nbsp; 六个视角，一套悬挂</footer>
+</div>
+
+<div id="dump" hidden></div>
+
+<script>
+(function(){
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+
+/* =====================================================================
+   模型（与 tools/gen_parts_state.py 同一组式子，读者可复算）
+   ===================================================================== */
+const M = 300, X = 0.05, T_END = 8, DT = 0.002, EVERY = 5;   // 每 5 步记一次样 = 0.01 年
+const ARM_SHARE = 0.45, STAB_SHARE = 0.30;
+
+const PARTS = [
+  {k:"body",   n:"车身 · 减震塔",        q:"局部刚度", u:"N/mm",  v0:25000, v8:24700, h8:0.96, d:"A", dec:0,
+   why:"车身钣金基本不参与磨损，只在长期锈蚀下略降"},
+  {k:"mount",  n:"顶胶 / 上支座",        q:"等效刚度", u:"N/mm",  v0:2500,  v8:3200,  h8:0.55, d:"A", dec:0,
+   why:"橡胶氧化变硬、再开裂：数字往上走，其实是变差"},
+  {k:"spring", n:"螺旋弹簧",             q:"刚度 k",   u:"N/m",   v0:20000, v8:13700, h8:0.69, d:"A", dec:0,
+   why:"反复压缩的应变幅值决定钢丝的疲劳速度"},
+  {k:"damper", n:"减震器",               q:"阻尼 c",   u:"N·s/m", v0:1500,  v8:700,   h8:0.47, d:"W", dec:0,
+   why:"它自己耗散的功率越大，油液与阀片坏得越快"},
+  {k:"knuckle",n:"转向节（羊角）",        q:"定位偏差", u:"mm",    v0:0.00,  v8:0.35,  h8:0.80, d:"A", dec:3,
+   why:"长期承受交变载荷与偶发撞击，几何位置慢慢走掉"},
+  {k:"arm",    n:"下控制臂 ＋ 球头",      q:"球头间隙", u:"mm",    v0:0.05,  v8:0.55,  h8:0.30, d:"A", dec:3,
+   why:"球头是磨损件，行程序次越多、间隙越大"},
+  {k:"bush",   n:"衬套",                 q:"等效刚度", u:"N/mm",  v0:3000,  v8:3900,  h8:0.62, d:"A", dec:0,
+   why:"橡胶老化：先变硬、后开裂，数字往上走"},
+  {k:"bar",    n:"横向稳定杆 ＋ 连接杆",  q:"扭转刚度", u:"N·m/°", v0:1200,  v8:820,   h8:0.70, d:"A", dec:0,
+   why:"连接杆球头磨损、杆身疲劳，抗侧倾能力下降"},
+  {k:"sub",    n:"副车架",               q:"连接刚度", u:"N/mm",  v0:8000,  v8:6300,  h8:0.85, d:"A", dec:0,
+   why:"衬套与焊点长期受载，连接的紧度慢慢松掉"},
+  {k:"hub",    n:"车轮 / 轮毂轴承",       q:"轴向游隙", u:"mm",    v0:0.020, v8:0.085, h8:0.40, d:"L", dec:3,
+   why:"轴承是纯里程件：跑多少路，磨多少"},
+];
+const P = {}; PARTS.forEach(p => { P[p.k] = p; });
+
+const val = (p, h) => p.v0 + (p.v8 - p.v0) * (1 - h) / (1 - p.h8);
+
+function st(h){
+  const kS = val(P.spring, h.spring);
+  const c  = val(P.damper, h.damper);
+  const kM = val(P.mount,  h.mount) * 1000;              // N/mm -> N/m
+  const k  = 1 / (1 / kS + 1 / kM);
+  const wn = Math.sqrt(k / M);
+  const A  = X * Math.sqrt(k * M) / c;
+  const Fk = k * A, Fc = c * wn * A, Fs = Math.hypot(Fk, Fc);
+  const W  = Math.PI * c * wn * A * A;
+  const zeta = c / (2 * Math.sqrt(k * M));
+  const gap = val(P.arm, h.arm) + 2 * val(P.hub, h.hub) + val(P.knuckle, h.knuckle);
+  return {k, kS, c, wn, A, Fk, Fc, Fs, W, zeta, peak: 1 / (2 * zeta),
+          Fwheel: Fs, Farm: ARM_SHARE * Fs, Fbar: STAB_SHARE * ARM_SHARE * Fs,
+          gap, roll: val(P.bar, h.bar)};
+}
+
+/* 积分 + 反解 λ（λ 由"8 年健康度"迭代反解，与 Python 侧同法） */
+function integrate(lam){
+  const h = {}, acc = {};
+  PARTS.forEach(p => { h[p.k] = 1; acc[p.k] = 0; });
+  const s0 = st(h), a0 = s0.A, w0 = s0.W;
+  const N = Math.round(T_END / DT);
+  const samp = [{t: 0, h: Object.assign({}, h)}];
+  for (let i = 1; i <= N; i++){
+    const s = st(h), t = i * DT;
+    for (const p of PARTS){
+      const drv = p.d === "A" ? s.A / a0 : (p.d === "W" ? s.W / w0 : t / T_END);
+      acc[p.k] += drv * DT;
+      if (lam) h[p.k] -= lam[p.k] * drv * DT;
+    }
+    if (i % EVERY === 0) samp.push({t, h: Object.assign({}, h)});
+  }
+  return {samp, acc, h8: h};
+}
+
+const first = integrate(null);
+const LAM = {};
+PARTS.forEach(p => { LAM[p.k] = (1 - p.h8) / first.acc[p.k]; });
+let RUN = integrate(LAM);
+for (let it = 0; it < 60; it++){
+  let err = 0;
+  PARTS.forEach(p => { err = Math.max(err, Math.abs(RUN.h8[p.k] - p.h8)); });
+  if (err < 1e-12) break;
+  PARTS.forEach(p => {
+    const want = 1 - p.h8, got = 1 - RUN.h8[p.k];
+    if (got > 1e-15) LAM[p.k] *= want / got;
+  });
+  RUN = integrate(LAM);
+}
+const SAMP = RUN.samp;
+
+function hAt(t){
+  const u = t / (EVERY * DT);
+  let j = Math.floor(u + 1e-9);
+  if (j < 0) j = 0;
+  if (j >= SAMP.length - 1) return SAMP[SAMP.length - 1].h;
+  const f = u - j, a = SAMP[j].h, b = SAMP[j + 1].h, o = {};
+  for (const k in a) o[k] = a[k] + (b[k] - a[k]) * f;
+  return o;
+}
+
+/* 供无头浏览器取证的钩子：把 0–8 年逐年状态写进隐藏节点 */
+(function dump(){
+  const rows = [];
+  for (let y = 0; y <= 8; y++){
+    const h = hAt(y), s = st(h), v = {};
+    PARTS.forEach(p => { v[p.k] = val(p, h[p.k]); });
+    rows.push(Object.assign({year: y, h, v}, s));
+  }
+  document.getElementById("dump").textContent = JSON.stringify(rows);
+})();
+
+/* =====================================================================
+   版面
+   ===================================================================== */
+const BW = 200, BH = 92;
+const POS = {
+  body:   [310,  96], mount:  [310, 228], spring: [140, 376], damper: [480, 376],
+  knuckle:[310, 524], hub:    [310, 672],
+  sub:    [900,  96], bush:   [900, 228], arm:    [900, 524], bar:    [900, 672],
+};
+/* SVG 需要字面量颜色，取值与 assets/theme.css 的 token 一致，逐一注明对应 token
+   （改配色时按 token 名搜得到这里）。健康色阶是算出来的 hsl，不在此列。 */
+const C = {
+  panel:   "#23272d",  // --panel
+  panel2:  "#2a2f36",  // --panel-2
+  bgDeep:  "#141719",  // --bg-deep
+  border:  "#363c45",  // --line
+  lineSoft:"#2c3138",  // --line-soft
+  text:    "#ffffff",  // --fg
+  dim:     "#a9b2be",  // --fg-dim
+  faint:   "#7b848f",  // --fg-mute
+  accent:  "#00adb5",  // --accent
+  accent2: "#57e0ff",  // --accent-2
+  ok:      "#3ddc97",  // --ok
+  warn:    "#ffb454",  // --warn
+  red:     "#ff6b6b",  // --danger
+  blue:    "#4f9cf9",  // --s1
+  purple:  "#c9a6ff",  // --s5
+};
+
+const hueOf = h => Math.round(130 * Math.max(0, Math.min(1, (h - 0.5) / 0.5)));
+const edgeCol = h => `hsl(${hueOf(h)},64%,58%)`;
+const fillCol = h => `hsl(${hueOf(h)},58%,13%)`;
+
+const fmtN = (v, dec) => dec > 0
+  ? v.toFixed(dec)
+  : Math.round(v).toLocaleString("en-US").replace(/,/g, " ");
+const fmtF = v => Math.round(v).toLocaleString("en-US").replace(/,/g, " ");
+
+/* 连线定义：type h/v/p，q = 作用量字段，nm = 名称 */
+const LINKS = [
+  {id:"bodySub",   t:"h", y:96,  x1:410, x2:800, q:"Farm", nm:"副车架 → 车身", lab:[605, 74, "mid"]},
+  {id:"bodyMount", t:"v", x:310, y1:142, y2:182, q:"Fs",   nm:"总成 → 车身",   lab:[330, 158, "start"]},
+  {id:"busTop",    t:"p", seg:[[310,274,310,318],[140,318,480,318],[140,318,140,330],[480,318,480,330]],
+                   q:"Fs", nm:"顶胶 ⇄ 总成", lab:[330, 292, "start"]},
+  {id:"springD",   t:"h", y:376, x1:240, x2:380, q:"Fk", q2:"Fc",
+                   nm:"弹簧力", lab:[310, 346, "mid"], lab2:[310, 408, "mid"]},
+  {id:"busBot",    t:"p", seg:[[140,422,140,446],[140,446,480,446],[480,422,480,446],[310,446,310,478]],
+                   q:"Fs", nm:"总成 ⇄ 转向节", lab:[330, 456, "start"]},
+  {id:"knuckleHub",t:"v", x:310, y1:570, y2:626, q:"Fwheel", nm:"轮荷", lab:[330, 588, "start"]},
+  {id:"knuckleArm",t:"h", y:524, x1:410, x2:800, q:"Farm", nm:"球头力", lab:[605, 494, "mid"]},
+  {id:"bushSub",   t:"v", x:900, y1:142, y2:182, q:"Farm", nm:"衬套 → 副车架", lab:[786, 158, "end"]},
+  {id:"armBush",   t:"v", x:900, y1:274, y2:478, q:"Farm", nm:"摆臂 → 衬套", lab:[786, 368, "end"]},
+  {id:"armBar",    t:"v", x:900, y1:570, y2:626, q:"Fbar", nm:"连接杆力", lab:[786, 588, "end"]},
+  {id:"barSub",    t:"p", seg:[[1000,672,1070,672],[1070,672,1070,96],[1070,96,1000,96]],
+                   q:"Fbar", nm:"稳定杆 → 副车架", lab:[1058, 372, "end"]},
+];
+const Q0 = {};   // 各作用量的"新件"水平，用来定流动速度
+(function(){ const s = st(hAt(0)); LINKS.forEach(l => { Q0[l.id] = s[l.q]; }); })();
+
+/* ---------- 建 SVG ---------- */
+const svg = document.getElementById("svg");
+const el = (t, a) => { const e = document.createElementNS(NS, t);
+  for (const k in a) e.setAttribute(k, a[k]); return e; };
+const tx = (t, a, s) => { const e = el(t, a); e.textContent = s; return e; };
+
+const defs = el("defs", {});
+const pat = el("pattern", {id:"grid", width:20, height:20, patternUnits:"userSpaceOnUse"});
+pat.appendChild(el("path", {d:"M20 0 L0 0 0 20", fill:"none", stroke:"#ffffff",
+                            "stroke-opacity":"0.04", "stroke-width":"1"}));
+defs.appendChild(pat); svg.appendChild(defs);
+svg.appendChild(el("rect", {width:1140, height:800, fill:"url(#grid)"}));
+
+svg.appendChild(tx("text", {x:310, y:28, "font-size":12.5, fill:C.dim,
+  "text-anchor":"middle", "font-weight":"600"}, "弹性／减震支路"));
+svg.appendChild(tx("text", {x:900, y:28, "font-size":12.5, fill:C.dim,
+  "text-anchor":"middle", "font-weight":"600"}, "导向／支撑支路"));
+svg.appendChild(tx("text", {x:605, y:28, "font-size":12, fill:C.faint,
+  "text-anchor":"middle"}, "互相作用"));
+
+const ui = {part:{}, link:{}};
+
+/* 连线先画，方块压在上面 */
+LINKS.forEach(function(L){
+  const col1 = C.blue, col2 = C.accent;
+  const g = el("g", {}); const items = [];
+  function arrow(x1, y1, x2, y2, col, dirRight){
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+    const ex = x2 - ux * 10, ey = y2 - uy * 10;
+    const ln = el("line", {x1:x1, y1:y1, x2:ex, y2:ey, stroke:col,
+      "stroke-width":2.2, class:"flow"});
+    const px = -uy, py = ux;
+    const head = el("path", {d:`M${x2} ${y2} l${(-ux*10+px*5.5).toFixed(1)} ${(-uy*10+py*5.5).toFixed(1)} l${(-ux*10-px*5.5).toFixed(1)} ${(-uy*10-py*5.5).toFixed(1)} z`, fill:col});
+    g.appendChild(ln); g.appendChild(head);
+    items.push({ln, head});
+  }
+  function pair(x1, y1, x2, y2){
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len * 3.4, py = dx / len * 3.4;
+    arrow(x1 + px, y1 + py, x2 + px, y2 + py, col1, true);
+    arrow(x2 - px, y2 - py, x1 - px, y1 - py, col2, false);
+  }
+  if (L.t === "h") pair(L.x1, L.y, L.x2, L.y);
+  else if (L.t === "v") pair(L.x, L.y1, L.x, L.y2);
+  else L.seg.forEach(s => pair(s[0], s[1], s[2], s[3]));
+
+  const lx = L.lab[0], ly = L.lab[1];
+  g.appendChild(tx("text", {x:lx, y:ly, "font-size":10, fill:C.faint,
+    "text-anchor":L.lab[2]}, L.nm));
+  const n1 = tx("text", {x:lx, y:ly + 15, "font-size":11.5, fill:C.text,
+    "font-weight":"600", "text-anchor":L.lab[2]}, "");
+  g.appendChild(n1);
+  let n2 = null;
+  if (L.lab2){
+    g.appendChild(tx("text", {x:L.lab2[0], y:L.lab2[1], "font-size":10, fill:C.faint,
+      "text-anchor":L.lab2[2]}, "阻尼力"));
+    n2 = tx("text", {x:L.lab2[0], y:L.lab2[1] + 15, "font-size":11.5, fill:C.text,
+      "font-weight":"600", "text-anchor":L.lab2[2]}, "");
+    g.appendChild(n2);
+  }
+  svg.appendChild(g);
+  ui.link[L.id] = {items, n1, n2};
+});
+
+/* 零件方块 */
+PARTS.forEach(function(p){
+  const [cx, cy] = POS[p.k];
+  const x = cx - BW / 2, y = cy - BH / 2;
+  const g = el("g", {});
+  const bg = el("rect", {x:x, y:y, width:BW, height:BH, rx:12,
+    fill:C.panel, stroke:C.border, "stroke-width":1.6});
+  g.appendChild(bg);
+  g.appendChild(tx("text", {x:cx, y:cy - 22, "font-size":12.5, fill:C.text,
+    "text-anchor":"middle"}, p.n));
+  const up = p.v8 > p.v0;
+  const dir = el("polygon", {
+    points: up ? "0,-4.6 4.6,3.2 -4.6,3.2" : "0,4.6 4.6,-3.2 -4.6,-3.2",
+    transform: "translate(" + (cx + BW / 2 - 18) + "," + (cy - 26) + ")",
+    fill: C.dim});
+  // 不放字体字形：10.5px 的 ↑↓ 只有几个像素高，读不出来（已用渲染实验确认字形本身没问题，是尺寸问题）。
+  // 用实心三角形，与字体无关，任何环境下形状都成立。
+  dir.appendChild(tx("title", {}, up ? "这件零件的数值随时间往上走" : "这件零件的数值随时间往下走"));
+  g.appendChild(dir);
+  const vT = tx("text", {x:cx, y:cy + 9, "font-size":16, "font-weight":"600",
+    "text-anchor":"middle", fill:C.text}, "");
+  g.appendChild(vT);
+  g.appendChild(el("rect", {x:cx - 88, y:cy + 23, width:130, height:6, rx:3, fill:C.border}));
+  const bar = el("rect", {x:cx - 88, y:cy + 23, width:130, height:6, rx:3, fill:C.ok});
+  g.appendChild(bar);
+  const pc = tx("text", {x:cx + 50, y:cy + 29, "font-size":10, fill:C.dim,
+    "text-anchor":"start"}, "");
+  g.appendChild(pc);
+  svg.appendChild(g);
+  ui.part[p.k] = {g, bg, vT, bar, pc, dir};
+});
+
+/* =====================================================================
+   状态更新
+   ===================================================================== */
+const hintEl = document.getElementById("hint");
+const statEl = document.getElementById("stats");
+const STATS = [
+  ["相对行程 A", "cm", s => (s.A * 100).toFixed(2)],
+  ["共振峰 Q", "倍", s => s.peak.toFixed(2)],
+  ["阻尼比 ζ", "", s => s.zeta.toFixed(3)],
+  ["松旷总量", "mm", s => s.gap.toFixed(2)],
+  ["抗侧倾刚度", "N·m/°", s => fmtN(s.roll, 0)],
+];
+STATS.forEach(function(d){
+  const c = document.createElement("div"); c.className = "stat-card";
+  c.innerHTML = '<div class="k">' + d[0] + '</div><div class="n" style="color:#e9e9ec">—</div>' +
+                '<span class="u">' + d[1] + '</span>';
+  statEl.appendChild(c); d.el = c.querySelector(".n");
+});
+
+const HINTS = [
+  [0, "<b>新件。</b>弹簧与减震器同轴，是这一路里唯一「互相看着」的一对：弹簧的变形给出相对速度，"
+      + "减震器的阻尼力又反过来限制弹簧的变形。点任意方块，看它自己的内因。"],
+  [1.6, "<b>第 1–2 年。</b>掉得很慢。此时驱动量还接近新件水平，各零件基本按自己的最小速率在走。"],
+  [3.5, "<b>第 3–5 年。</b>注意两件东西走岔了：弹簧那条数字在变小，它出的力却在小幅变大——因为摆得远了。"
+      + "减震器那条数字掉得最快。"],
+  [5.5, "<b>第 6–7 年。</b>看竖着的连接箭头：球头间隙、轴承游隙都大了，「松旷」在涨。"
+      + "这些间隙本身又变成了额外的冲击，回头去推着别的零件更快地坏。"],
+  [7.0, "<b>第 8 年。</b>同样是一年，开头掉 4%，末尾掉 7%——不是零件学会了坏，"
+      + "是它每坏一点，自己承受的作用就更大一点。整机层面：共振峰 1.63 → 2.89，行程 8.1 → 14.5 cm。"],
+];
+
+let cur = 0, timer = null;
+
+function draw(t, withStats){
+  const h = hAt(t), s = st(h);
+  PARTS.forEach(function(p){
+    const u = ui.part[p.k], hh = h[p.k];
+    const v = val(p, hh);
+    u.bg.setAttribute("stroke", edgeCol(hh));
+    u.bg.setAttribute("fill", fillCol(hh));
+    u.vT.setAttribute("fill", edgeCol(hh));
+    u.vT.textContent = fmtN(v, p.dec) + " " + p.u;
+    u.bar.setAttribute("fill", edgeCol(hh));
+    u.bar.setAttribute("width", (130 * Math.max(0, Math.min(1, hh))).toFixed(1));
+    u.pc.textContent = "健康 " + Math.round(hh * 100) + "%";
+  });
+  LINKS.forEach(function(L){
+    const items = ui.link[L.id].items;
+    const q = s[L.q];
+    const dur = Math.max(0.3, Math.min(2.8, 1.5 * (Q0[L.id] / Math.max(q, 1e-9))));
+    items.forEach(function(it){
+      it.ln.style.animationDuration = dur.toFixed(2) + "s";
+      it.ln.setAttribute("stroke-opacity", Math.max(0.25, Math.min(1, 0.35 + 0.65 * q / Q0[L.id])));
+    });
+    ui.link[L.id].n1.textContent = fmtF(q) + " N";
+    if (ui.link[L.id].n2) ui.link[L.id].n2.textContent = fmtF(s[L.q2]) + " N";
+  });
+  if (withStats !== false){
+    STATS.forEach(d => { d.el.textContent = d[2](s); });
+  }
+  document.getElementById("time").value = t;
+  document.getElementById("tick").textContent = "第 " + t.toFixed(1) + " 年";
+  let msg = HINTS[0][1];
+  for (const x of HINTS) if (t >= x[0]) msg = x[1];
+  hintEl.innerHTML = msg;
+  cur = t;
+}
+
+/* 说明表 */
+(function(){
+  const tb = document.getElementById("tbl");
+  PARTS.forEach(function(p){
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + p.n + "</td><td>" + p.q + "（" + p.u + "）</td>" +
+      '<td class="num">' + fmtN(p.v0, p.dec) + '</td>' +
+      '<td class="num">' + fmtN(p.v8, p.dec) + '</td><td>' + p.why + "</td>";
+    tb.appendChild(tr);
+  });
+})();
+
+/* 点方块 */
+const TIPS = {
+  body:   "车身的减震塔是弹簧的「上支点」。它的内因是钣金厚度与焊点；外因是长期振动与锈蚀。它基本不坏，但它是所有力最后要汇到的地方。",
+  mount:  "顶胶的内因是橡胶配方与金属骨架。外因是反复的剪切与温度。橡胶先氧化变硬——隔振变差，冲击更多传进车身；再开裂——出现自由行程。注意：它的数字是<b>往上走</b>的。",
+  spring: "弹簧的内因是钢丝直径、圈数、材料与热处理。外因是每一次压缩的应变幅值。疲劳让自由长度变短、刚度下降——数字往下走。",
+  damper: "减震器的内因是油液黏度、阀片开合、活塞与缸筒间隙。外因是它自己每一次动作耗散掉的热量。油温越高、杂质越多，阀片磨损越快，c 掉得越狠。",
+  knuckle:"转向节的内因是铸造材料与结构刚度。外因是交变载荷与偶发的撞击。它的几何位置一旦走掉，四轮定位就跟着走。",
+  arm:    "球头的内因是球座与密封。外因是每一次摆动的行程与次数。间隙一大，冲击就变成「咯噔」，而且间隙本身又成了新的冲击源。",
+  bush:   "衬套的内因是橡胶配方与金属内外套。外因是反复的扭转与挤压。老化让它先变硬、后开裂——数字往上走，但关系松了。",
+  bar:    "稳定杆的内因是弹簧钢杆身与两端连接球头。外因是左右轮的高度差。连接杆球头一磨损，抗侧倾能力就跟着掉。",
+  sub:    "副车架的内因是冲压件焊接与安装衬套。外因是它把所有导向力汇总传进车身。衬套一软，连接的紧度就松了。",
+  hub:    "轮毂轴承的内因是滚道与密封。外因只有一句话：跑了多少路。它是整张图里最「里程」的一件，跟路况好坏关系最小。",
+};
+PARTS.forEach(function(p){
+  ui.part[p.k].bg.style.cursor = "pointer";
+  ui.part[p.k].bg.addEventListener("click", function(){ hintEl.innerHTML = "<b>" + p.n + "</b>：" + TIPS[p.k]; });
+});
+
+/* 交互 */
+const slider = document.getElementById("time");
+function stop(){
+  if (timer){ cancelAnimationFrame(timer); timer = null; }
+  document.getElementById("play").textContent = "▶ 播放";
+}
+function play(){
+  if (timer){ stop(); return; }
+  if (cur >= T_END - 1e-9) draw(0);
+  document.getElementById("play").textContent = "⏸ 暂停";
+  let last = performance.now();
+  (function step(now){
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    let t = cur + dt * 1.1;
+    if (t >= T_END){ t = T_END; draw(t); stop(); return; }
+    draw(t);
+    timer = requestAnimationFrame(step);
+  })(last);
+}
+document.getElementById("play").addEventListener("click", play);
+document.getElementById("reset").addEventListener("click", function(){ stop(); draw(0); });
+slider.addEventListener("input", function(e){ stop(); draw(+e.target.value); });
+
+/* #t=年 深链：读者可分享某一时刻，也可让无头浏览器对任意时刻取证 */
+const m0 = /#t=([\d.]+)/.exec(location.hash);
+draw(m0 ? Math.max(0, Math.min(T_END, +m0[1])) : 0);
+window.addEventListener("hashchange", function(){
+  const m = /#t=([\d.]+)/.exec(location.hash);
+  if (m){ stop(); draw(Math.max(0, Math.min(T_END, +m[1]))); }
+});
+})();
+</script>
+</body>
+</html>

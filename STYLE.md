@@ -36,7 +36,7 @@
   <span class="tag tag--ghost">Canvas · 零依赖</span>
 </header>
 …
-<footer class="site-foot">汽车悬挂系统 · 综合可视化项目 ｜ 三个视角，一套悬挂</footer>
+<footer class="site-foot">汽车悬挂系统 · 综合可视化项目 ｜ 六个视角，一套悬挂</footer>
 ```
 
 - **顶栏必有**：它同时解决"从子页面回不去导航页"的问题（并入前三个模块都没有返回入口）。
