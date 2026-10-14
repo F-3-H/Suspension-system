@@ -9,6 +9,7 @@
  *   4) 混合写法：CSS 里的界面配色必须用 var(--token)，不许再写死十六进制
  *   5) 导航页与磁盘上的模块**双向一致**（有模块没卡片、或有卡片没文件都要报）
  *   6) 离线自足项目里复制的那份 token 与 assets/theme.css 保持一致
+ *   7) 正文（HTML/MD）里提到的 tools/ 脚本必须在磁盘上存在
  *
  * 用法：node tools/verify-repo-style.cjs        （退出码非 0 表示不通过）
  */
@@ -158,6 +159,33 @@ for (const p of extraCss) {
   ok(bad.length === 0, `${rel(p)} \u91CC\u590D\u5236\u7684\u4E3B\u8272 token \u4E0E\u4E3B\u9898\u4E00\u81F4`,
     bad.map(k => `${k}: ${local[k]} \u2260 ${tokens[k]}`).join(', '));
   if (missing.length) console.log(`    \uFF08${rel(p)} \u672A\u5B9A\u4E49 ${missing.join(', ')}\uFF1A\u5C5E\u4E8E\u53EF\u9009\uFF09`);
+}
+
+// ---------------------------------------------------------------- 7 正文提到的脚本要真的存在
+section('\u6B63\u6587\u91CC\u63D0\u5230\u7684 tools/ \u811A\u672C\u5FC5\u987B\u5728\u4ED3\u5E93\u91CC\u771F\u7684\u6709')
+// 起因：VIEW 06 \u5E76\u5165\u65F6\u628A gen_parts_state.py \u6539\u540D\u4E3A gen-parts-state.py\uFF08\u5BF9\u9F50\u4ED3\u5E93\u7684\u8FDE\u5B57\u7B26\u547D\u540D\uFF09\uFF0C
+// \u6587\u4EF6\u6539\u4E86\u540D\uFF0C\u9875\u9762\u6B63\u6587\u91CC\u7684\u5F15\u7528\u5374\u6CA1\u8DDF\u7740\u6539\u3002\u800C\u4E09\u9053\u9A8C\u6536\uFF08\u8BED\u6CD5\u3001\u6570\u503C\u4E92\u8BC1\u3001\u98CE\u683C\uFF09\u5168\u7EFF\u2014\u2014
+// \u56E0\u4E3A\u6CA1\u6709\u4E00\u9053\u5728\u67E5\u201C\u6B63\u6587\u91CC\u5199\u7684\u6587\u4EF6\u540D\u201D\u3002\u91CD\u547D\u540D\u8981\u8FDE\u5E26\u6539\u7684\u662F**\u6563\u6587**\uFF0C\u8FD9\u4E00\u9879\u5C31\u662F\u4E3A\u5B83\u52A0\u7684\u3002
+//
+// \u5224\u636E\u53EA\u95EE\u201C\u8FD9\u4E2A\u540D\u5B57\u5728\u672C\u4ED3\u5E93\u91CC\u8FD8\u6709\u6CA1\u6709\u4E00\u4E2A\u6587\u4EF6\u201D\uFF0C**\u4E0D**\u95EE\u201C\u5B83\u5728\u54EA\u4E2A\u76EE\u5F55\u201D\uFF1A
+// README \u91CC\u7684 `cd modules/phase-space-calculator` \u4E0E\u540C\u4E00\u4EE3\u7801\u5757\u91CC\u7684 `node tools/verify-sizes.cjs` \u662F\u914D\u5408\u7740\u8BFB\u7684\uFF0C
+// \u6309\u201C\u6587\u4EF6\u81EA\u5DF1\u7684\u76EE\u5F55\u201D\u53BB\u89E3\u4F1A\u8BEF\u62A5\uFF08\u5DF2\u8BD5\u8FC7\uFF09\u3002\u53EA\u67E5\u5B58\u5728\u6027\uFF0C\u5C31\u80FD\u6293\u4F4F\u91CD\u547D\u540D\u4E0E\u5220\u9664\uFF0C\u800C\u4E0D\u4F1A\u62A5\u9519\u3002
+// .log/.bak \u4E4B\u7C7B\u662F\u8FD0\u884C\u65F6\u4EA7\u7269\uFF0C\u4E0D\u5728\u6B64\u5217\u3002
+const allFiles = (function collect(dir, acc = []) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === '.git' || e.name === 'node_modules') continue;
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) collect(p, acc);
+    else acc.push(rel(p));
+  }
+  return acc;
+})(root);
+const prose = allFiles.filter(f => f.endsWith('.html') || f.endsWith('.md'));
+for (const r of prose) {
+  const named = [...new Set([...read(path.join(root, r)).matchAll(/tools\/[A-Za-z0-9_-]+\.(?:cjs|mjs|js|py|ps1)\b/g)].map(m => m[0]))];
+  if (!named.length) continue;
+  const missing = named.filter(n => !allFiles.some(f => f === n || f.endsWith('/' + n)));
+  ok(missing.length === 0, `${r} \u63D0\u5230\u7684 ${named.length} \u4E2A tools/ \u811A\u672C\u5728\u4ED3\u5E93\u91CC\u90FD\u80FD\u627E\u5230`, missing.join(', '));
 }
 
 // ---------------------------------------------------------------- 汇总

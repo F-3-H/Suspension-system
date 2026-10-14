@@ -94,7 +94,7 @@
   <div class="hint" id="hint"></div>
 
   <details>
-    <summary>这张图里的数字是怎么算出来的（可复算，与 tools/gen_parts_state.py 逐点对过）</summary>
+    <summary>这张图里的数字是怎么算出来的（可复算，与 tools/gen-parts-state.py 逐点对过）</summary>
     <p>四分之一车模型，只看簧上共振这个最烈工况：路面激励幅值 <code>X = 0.05 m</code>，
        作用频率取当前固有频率 <code>ωn = √(k_eff/m)</code>，簧载质量 <code>m = 300 kg</code>。</p>
     <div class="formula">
@@ -110,7 +110,7 @@
        各 λ 由"8 年后的健康度"反解（迭代求得，页面自己算）。</p>
     <p><b>关键在这里</b>：A 与 W 都出现在 k_eff、c 的式子里，而 k_eff、c 又由零件决定——
        一件坏，另一件的驱动就变大，于是互相推着坏。所以年份越靠后，同样一年掉得越多。</p>
-    <p>本项目的 <code>tools/gen_parts_state.py</code> 用 Python 独立算了一遍同样的式子，
+    <p>本项目的 <code>tools/gen-parts-state.py</code> 用 Python 独立算了一遍同样的式子，
        页面上这组数字与它 0–8 年逐年比对过。
        <b>数字是示意的粗糙模型，量级取自真实减震器与弹簧，不是实测值。</b></p>
     <table class="tb">
@@ -131,7 +131,7 @@
 const NS = "http://www.w3.org/2000/svg";
 
 /* =====================================================================
-   模型（与 tools/gen_parts_state.py 同一组式子，读者可复算）
+   模型（与 tools/gen-parts-state.py 同一组式子，读者可复算）
    ===================================================================== */
 const M = 300, X = 0.05, T_END = 8, DT = 0.002, EVERY = 5;   // 每 5 步记一次样 = 0.01 年
 const ARM_SHARE = 0.45, STAB_SHARE = 0.30;
